@@ -50,6 +50,7 @@ class Issue < ActiveRecord::Base
   validates_length_of :subject, :maximum => 255
   validates_inclusion_of :done_ratio, :in => 0..100
   validates_numericality_of :estimated_hours, :allow_nil => true
+  validate :validate_due_date, :validate_fixed_version
 
   named_scope :visible, lambda {|*args| { :include => :project,
                                           :conditions => Project.allowed_to_condition(args.first || User.current, :view_issues) } }
@@ -129,28 +130,6 @@ class Issue < ActiveRecord::Base
   
   def estimated_hours=(h)
     write_attribute :estimated_hours, (h.is_a?(String) ? h.to_hours : h)
-  end
-  
-  def validate
-    if self.due_date.nil? && @attributes['due_date'] && !@attributes['due_date'].empty?
-      errors.add :due_date, :not_a_date
-    end
-    
-    if self.due_date and self.start_date and self.due_date < self.start_date
-      errors.add :due_date, :greater_than_start_date
-    end
-    
-    if start_date && soonest_start && start_date < soonest_start
-      errors.add :start_date, :invalid
-    end
-    
-    if fixed_version
-      if !assignable_versions.include?(fixed_version)
-        errors.add :fixed_version_id, :inclusion
-      elsif reopened? && fixed_version.closed?
-        errors.add_to_base I18n.t(:error_can_not_reopen_issue_on_closed_version)
-      end
-    end
   end
   
   def validate_on_create
@@ -309,9 +288,33 @@ class Issue < ActiveRecord::Base
     s << ' assigned-to-me' if User.current.logged? && assigned_to_id == User.current.id
     s
   end
-  
-  private
-  
+
+private
+
+  def validate_due_date
+    if self.due_date.nil? && @attributes['due_date'] && !@attributes['due_date'].empty?
+      errors.add :due_date, :not_a_date
+    end
+
+    if self.due_date and self.start_date and self.due_date < self.start_date
+      errors.add :due_date, :greater_than_start_date
+    end
+
+    if start_date && soonest_start && start_date < soonest_start
+      errors.add :start_date, :invalid
+    end
+  end
+
+  def validate_fixed_version
+    if fixed_version
+      if !assignable_versions.include?(fixed_version)
+        errors.add :fixed_version_id, :inclusion
+      elsif reopened? && fixed_version.closed?
+        errors.add_to_base I18n.t(:error_can_not_reopen_issue_on_closed_version)
+      end
+    end
+  end
+
   # Callback on attachment deletion
   def attachment_removed(obj)
     journal = init_journal(User.current)

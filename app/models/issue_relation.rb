@@ -34,16 +34,9 @@ class IssueRelation < ActiveRecord::Base
   validates_inclusion_of :relation_type, :in => TYPES.keys
   validates_numericality_of :delay, :allow_nil => true
   validates_uniqueness_of :issue_to_id, :scope => :issue_from_id
+  validate :validate_issue_relation
   
   attr_protected :issue_from_id, :issue_to_id
-  
-  def validate
-    if issue_from && issue_to
-      errors.add :issue_to_id, :invalid if issue_from_id == issue_to_id
-      errors.add :issue_to_id, :not_same_project unless issue_from.project_id == issue_to.project_id || Setting.cross_project_issue_relations?
-      errors.add_to_base :circular_dependency if issue_to.all_dependent_issues.include? issue_from
-    end
-  end
   
   def other_issue(issue)
     (self.issue_from_id == issue.id) ? issue_to : issue_from
@@ -77,5 +70,15 @@ class IssueRelation < ActiveRecord::Base
   
   def <=>(relation)
     TYPES[self.relation_type][:order] <=> TYPES[relation.relation_type][:order]
+  end
+
+private
+
+  def validate_issue_relation
+    if issue_from && issue_to
+      errors.add :issue_to_id, :invalid if issue_from_id == issue_to_id
+      errors.add :issue_to_id, :not_same_project unless issue_from.project_id == issue_to.project_id || Setting.cross_project_issue_relations?
+      errors.add_to_base :circular_dependency if issue_to.all_dependent_issues.include? issue_from
+    end
   end
 end

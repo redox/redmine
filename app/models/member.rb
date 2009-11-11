@@ -24,6 +24,7 @@ class Member < ActiveRecord::Base
 
   validates_presence_of :principal, :project
   validates_uniqueness_of :user_id, :scope => :project_id
+  validate :validate_role
   
   def name
     self.user.name
@@ -60,7 +61,7 @@ class Member < ActiveRecord::Base
   
   protected
   
-  def validate
+  def validate_role
     errors.add_to_base "Role can't be blank" if member_roles.empty? && roles.empty?
   end
 end

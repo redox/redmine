@@ -25,12 +25,13 @@ class MemberRole < ActiveRecord::Base
   after_destroy :remove_role_from_group_users
   
   validates_presence_of :role
-  
-  def validate
-    errors.add :role_id, :invalid if role && !role.member?
-  end
+  validate :validate_role_membership
   
   private
+
+  def validate_role_membership
+    errors.add :role_id, :invalid if role && !role.member?
+  end
   
   def remove_member_if_empty
     if member.roles.empty?
