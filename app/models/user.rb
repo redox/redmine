@@ -333,11 +333,7 @@ class User < Principal
 end
 
 class AnonymousUser < User
-  
-  def validate_on_create
-    # There should be only one AnonymousUser in the database
-    errors.add_to_base 'An anonymous user already exists.' if AnonymousUser.find(:first)
-  end
+  before_validation :ensure_single_anonymous_user, :on => :create
   
   def available_custom_fields
     []
@@ -350,4 +346,11 @@ class AnonymousUser < User
   def mail; nil end
   def time_zone; nil end
   def rss_key; nil end
+
+  private
+
+  def ensure_single_anonymous_user
+    # There should be only one AnonymousUser in the database
+    errors.add_to_base 'An anonymous user already exists.' if AnonymousUser.find(:first)
+  end
 end
