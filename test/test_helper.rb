@@ -18,7 +18,6 @@
 ENV["RAILS_ENV"] ||= "test"
 require File.expand_path('../../config/environment', __FILE__)
 require 'rails/test_help'
-require 'helper_testcase'
 require 'mocks/open_id_authentication_mock'
 
 require 'object_daddy_helpers'
