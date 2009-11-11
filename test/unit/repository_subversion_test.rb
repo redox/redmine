@@ -21,7 +21,7 @@ class RepositorySubversionTest < ActiveSupport::TestCase
   fixtures :projects
   
   # No '..' in the repository path for svn
-  REPOSITORY_PATH = RAILS_ROOT.gsub(%r{config\/\.\.}, '') + '/tmp/test/subversion_repository'
+  REPOSITORY_PATH = Rails.root.join('tmp/test/subversion_repository')
   
   def setup
     @project = Project.find(1)

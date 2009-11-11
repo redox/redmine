@@ -27,7 +27,7 @@ class RepositoriesSubversionControllerTest < ActionController::TestCase
            :issue_categories, :enumerations, :custom_fields, :custom_values, :trackers
 
   # No '..' in the repository path for svn
-  REPOSITORY_PATH = RAILS_ROOT.gsub(%r{config\/\.\.}, '') + '/tmp/test/subversion_repository'
+  REPOSITORY_PATH = Rails.root.join('tmp/test/subversion_repository')
 
   def setup
     @controller = RepositoriesController.new

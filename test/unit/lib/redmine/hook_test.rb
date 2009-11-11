@@ -61,7 +61,7 @@ class Redmine::Hook::ManagerTest < ActiveSupport::TestCase
   def setup
     @hook_module = Redmine::Hook
     @hook_helper = TestHookHelperController.new
-    @view_hook_helper = TestHookHelperView.new(RAILS_ROOT + '/app/views')
+    @view_hook_helper = TestHookHelperView.new(Rails.root.join('app/views'))
   end
   
   def teardown
