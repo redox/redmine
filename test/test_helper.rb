@@ -16,12 +16,12 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 ENV["RAILS_ENV"] ||= "test"
-require File.expand_path(File.dirname(__FILE__) + "/../config/environment")
-require 'test_help'
-require File.expand_path(File.dirname(__FILE__) + '/helper_testcase')
-require File.join(RAILS_ROOT,'test', 'mocks', 'open_id_authentication_mock.rb')
+require File.expand_path('../../config/environment', __FILE__)
+require 'rails/test_help'
+require 'helper_testcase'
+require 'mocks/open_id_authentication_mock'
 
-require File.expand_path(File.dirname(__FILE__) + '/object_daddy_helpers')
+require 'object_daddy_helpers'
 include ObjectDaddyHelpers
 
 class ActiveSupport::TestCase
