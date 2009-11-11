@@ -577,12 +577,12 @@ class User < Principal
   def self.generate_salt
     ActiveSupport::SecureRandom.hex(16)
   end
-  
 end
 
 class AnonymousUser < User
-  
-  def validate_on_create
+  before_validation :ensure_single_anonymous_user, :on => :create
+
+  def ensure_single_anonymous_user
     # There should be only one AnonymousUser in the database
     errors.add_to_base 'An anonymous user already exists.' if AnonymousUser.find(:first)
   end
