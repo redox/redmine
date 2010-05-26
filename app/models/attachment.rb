@@ -24,6 +24,7 @@ class Attachment < ActiveRecord::Base
   validates_presence_of :container, :filename, :author
   validates_length_of :filename, :maximum => 255
   validates_length_of :disk_filename, :maximum => 255
+  validate :validate_max_file_size
 
   acts_as_event :title => :filename,
                 :url => Proc.new {|o| {:controller => 'attachments', :action => 'download', :id => o.id, :filename => o.filename}}
@@ -43,13 +44,7 @@ class Attachment < ActiveRecord::Base
                                                         "LEFT JOIN #{Project.table_name} ON #{Document.table_name}.project_id = #{Project.table_name}.id"}
 
   cattr_accessor :storage_path
-  @@storage_path = "#{RAILS_ROOT}/files"
-  
-  def validate
-    if self.filesize > Setting.attachment_max_size.to_i.kilobytes
-      errors.add(:base, :too_long, :count => Setting.attachment_max_size.to_i.kilobytes)
-    end
-  end
+  @@storage_path = "#{Rails.root}/files"
 
   def file=(incoming_file)
     unless incoming_file.nil?
@@ -157,6 +152,12 @@ class Attachment < ActiveRecord::Base
   end
   
 private
+  def validate_max_file_size
+    if self.filesize > Setting.attachment_max_size.to_i.kilobytes
+      errors.add(:base, :too_long, :count => Setting.attachment_max_size.to_i.kilobytes)
+    end
+  end
+
   def sanitize_filename(value)
     # get only the filename, not the whole path
     just_filename = value.gsub(/^.*(\\|\/)/, '')

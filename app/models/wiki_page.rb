@@ -40,6 +40,7 @@ class WikiPage < ActiveRecord::Base
   validates_format_of :title, :with => /^[^,\.\/\?\;\|\s]*$/
   validates_uniqueness_of :title, :scope => :wiki_id, :case_sensitive => false
   validates_associated :content
+  validate :validate_parent_title
   
   # Wiki pages that are protected by default
   DEFAULT_PROTECTED_PAGES = %w(sidebar)
@@ -142,7 +143,7 @@ class WikiPage < ActiveRecord::Base
   
   protected
   
-  def validate
+  def validate_parent_title
     errors.add(:parent_title, :invalid) if !@parent_title.blank? && parent.nil?
     errors.add(:parent_title, :circular_dependency) if parent && (parent == self || parent.ancestors.include?(self))
     errors.add(:parent_title, :not_same_project) if parent && (parent.wiki_id != wiki_id)

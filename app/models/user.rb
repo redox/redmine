@@ -63,6 +63,7 @@ class User < Principal
   validates_format_of :mail, :with => /^([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})$/i, :allow_nil => true
   validates_length_of :mail, :maximum => 60, :allow_nil => true
   validates_confirmation_of :password, :allow_nil => true
+  validate :validate_password_length
 
   def before_create
     self.mail_notification = false
@@ -334,7 +335,7 @@ class User < Principal
   
   protected
   
-  def validate
+  def validate_password_length
     # Password length validation based on setting
     if !password.nil? && password.size < Setting.password_min_length.to_i
       errors.add(:password, :too_short, :count => Setting.password_min_length.to_i)
@@ -350,11 +351,7 @@ class User < Principal
 end
 
 class AnonymousUser < User
-  
-  def validate_on_create
-    # There should be only one AnonymousUser in the database
-    errors.add_to_base 'An anonymous user already exists.' if AnonymousUser.find(:first)
-  end
+  before_validation :ensure_single_anonymous_user, :on => :create
   
   def available_custom_fields
     []
@@ -367,4 +364,11 @@ class AnonymousUser < User
   def mail; nil end
   def time_zone; nil end
   def rss_key; nil end
+
+  private
+
+  def ensure_single_anonymous_user
+    # There should be only one AnonymousUser in the database
+    errors.add_to_base 'An anonymous user already exists.' if AnonymousUser.find(:first)
+  end
 end

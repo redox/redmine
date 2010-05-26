@@ -17,7 +17,7 @@
 
 require File.dirname(__FILE__) + '/../../test_helper'
 
-class ApplicationHelperTest < HelperTestCase
+class ApplicationHelperTest < ActionView::TestCase
   include ApplicationHelper
   include ActionView::Helpers::TextHelper
   include ActionView::Helpers::DateHelper
