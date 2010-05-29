@@ -6,6 +6,10 @@ gem 'rack', '1.1.0'
 gem 'rack-mount', '0.6.1'
 gem 'rubytree', '0.7.0'
 
+group :development do
+  gem 'sqlite3-ruby', :require => 'sqlite3'
+end
+
 group :test do
 
   gem 'shoulda'
