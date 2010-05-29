@@ -9,7 +9,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20091108092559) do
+ActiveRecord::Schema.define(:version => 20100313171051) do
 
   create_table "attachments", :force => true do |t|
     t.integer  "container_id",                 :default => 0,  :null => false
@@ -85,6 +85,7 @@ ActiveRecord::Schema.define(:version => 20091108092559) do
 
   add_index "changesets", ["committed_on"], :name => "index_changesets_on_committed_on"
   add_index "changesets", ["repository_id", "revision"], :name => "altered_changesets_repos_rev", :unique => true
+  add_index "changesets", ["repository_id", "scmid"], :name => "changesets_repos_scmid"
   add_index "changesets", ["repository_id"], :name => "index_changesets_on_repository_id"
   add_index "changesets", ["user_id"], :name => "index_changesets_on_user_id"
 
@@ -170,7 +171,6 @@ ActiveRecord::Schema.define(:version => 20091108092559) do
   add_index "enabled_modules", ["project_id"], :name => "enabled_modules_project_id"
 
   create_table "enumerations", :force => true do |t|
-    t.string  "opt",        :limit => 4,  :default => "",    :null => false
     t.string  "name",       :limit => 30, :default => "",    :null => false
     t.integer "position",                 :default => 1
     t.boolean "is_default",               :default => false, :null => false
@@ -210,11 +210,16 @@ ActiveRecord::Schema.define(:version => 20091108092559) do
   add_index "issue_relations", ["issue_to_id"], :name => "index_issue_relations_on_issue_to_id"
 
   create_table "issue_statuses", :force => true do |t|
-    t.string  "name",       :limit => 30, :default => "",    :null => false
-    t.boolean "is_closed",                :default => false, :null => false
-    t.boolean "is_default",               :default => false, :null => false
-    t.integer "position",                 :default => 1
+    t.string  "name",               :limit => 30, :default => "",    :null => false
+    t.boolean "is_closed",                        :default => false, :null => false
+    t.boolean "is_default",                       :default => false, :null => false
+    t.integer "position",                         :default => 1
+    t.integer "default_done_ratio"
   end
+
+  add_index "issue_statuses", ["is_closed"], :name => "index_issue_statuses_on_is_closed"
+  add_index "issue_statuses", ["is_default"], :name => "index_issue_statuses_on_is_default"
+  add_index "issue_statuses", ["position"], :name => "index_issue_statuses_on_position"
 
   create_table "issues", :force => true do |t|
     t.integer  "tracker_id",       :default => 0,  :null => false
@@ -234,6 +239,10 @@ ActiveRecord::Schema.define(:version => 20091108092559) do
     t.date     "start_date"
     t.integer  "done_ratio",       :default => 0,  :null => false
     t.float    "estimated_hours"
+    t.integer  "parent_id"
+    t.integer  "root_id"
+    t.integer  "lft"
+    t.integer  "rgt"
   end
 
   add_index "issues", ["assigned_to_id"], :name => "index_issues_on_assigned_to_id"
@@ -243,6 +252,7 @@ ActiveRecord::Schema.define(:version => 20091108092559) do
   add_index "issues", ["fixed_version_id"], :name => "index_issues_on_fixed_version_id"
   add_index "issues", ["priority_id"], :name => "index_issues_on_priority_id"
   add_index "issues", ["project_id"], :name => "issues_project_id"
+  add_index "issues", ["root_id", "lft", "rgt"], :name => "index_issues_on_root_id_and_lft_and_rgt"
   add_index "issues", ["status_id"], :name => "index_issues_on_status_id"
   add_index "issues", ["tracker_id"], :name => "index_issues_on_tracker_id"
 
@@ -351,6 +361,9 @@ ActiveRecord::Schema.define(:version => 20091108092559) do
     t.integer  "rgt"
   end
 
+  add_index "projects", ["lft"], :name => "index_projects_on_lft"
+  add_index "projects", ["rgt"], :name => "index_projects_on_rgt"
+
   create_table "projects_trackers", :id => false, :force => true do |t|
     t.integer "project_id", :default => 0, :null => false
     t.integer "tracker_id", :default => 0, :null => false
@@ -397,6 +410,8 @@ ActiveRecord::Schema.define(:version => 20091108092559) do
     t.text     "value"
     t.datetime "updated_on"
   end
+
+  add_index "settings", ["name"], :name => "index_settings_on_name"
 
   create_table "time_entries", :force => true do |t|
     t.integer  "project_id",  :null => false
@@ -474,9 +489,11 @@ ActiveRecord::Schema.define(:version => 20091108092559) do
     t.datetime "updated_on"
     t.string   "wiki_page_title"
     t.string   "status",          :default => "open"
+    t.string   "sharing",         :default => "none", :null => false
   end
 
   add_index "versions", ["project_id"], :name => "altered_versions_project_id"
+  add_index "versions", ["sharing"], :name => "index_versions_on_sharing"
 
   create_table "watchers", :force => true do |t|
     t.string  "watchable_type", :default => "", :null => false
