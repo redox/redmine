@@ -139,14 +139,11 @@ class Query < ActiveRecord::Base
   ]
   cattr_reader :available_columns
   
+  after_initialize :is_project_nil
+  
   def initialize(attributes = nil)
     super attributes
     self.filters ||= { 'status_id' => {:operator => "o", :values => [""]} }
-  end
-  
-  def after_initialize
-    # Store the fact that project is nil (used in #editable_by?)
-    @is_for_all = project.nil?
   end
   
   def validate_query_filters
@@ -587,5 +584,10 @@ class Query < ActiveRecord::Base
       s << ("#{table}.#{field} <= '%s'" % [connection.quoted_date((Date.today + to).to_time.end_of_day)])
     end
     s.join(' AND ')
+  end
+  
+  def is_project_nil
+    # Store the fact that project is nil (used in #editable_by?)
+    @is_for_all = project.nil?
   end
 end

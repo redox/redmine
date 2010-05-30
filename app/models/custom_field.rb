@@ -26,16 +26,12 @@ class CustomField < ActiveRecord::Base
   validates_format_of :name, :with => /^[\w\s\.\'\-]*$/i
   validates_inclusion_of :field_format, :in => Redmine::CustomFieldFormat.available_formats
   validate :validate_possible_values, :validate_default_value
+  
+  before_validation :lock_fiels
 
   def initialize(attributes = nil)
     super
     self.possible_values ||= []
-  end
-  
-  def before_validation
-    # make sure these fields are not searchable
-    self.searchable = false if %w(int float date bool).include?(field_format)
-    true
   end
   
   # Makes possible_values accept a multiline string
@@ -121,5 +117,11 @@ private
     v = CustomValue.new(:custom_field => self.clone, :value => default_value, :customized => nil)
     v.custom_field.is_required = false
     errors.add(:default_value, :invalid) unless v.valid?
+  end
+  
+  def lock_fields
+    # make sure these fields are not searchable
+    self.searchable = false if %w(int float date bool).include?(field_format)
+    true
   end
 end

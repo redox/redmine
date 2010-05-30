@@ -70,21 +70,13 @@ class Issue < ActiveRecord::Base
 
   before_create :default_assign
   before_save :reschedule_following_issues, :close_duplicates, :update_done_ratio_from_issue_status
-  after_save :update_nested_set_attributes, :update_parent_attributes, :create_journal
-  after_destroy :destroy_children
-  after_destroy :update_parent_attributes
+  after_save :update_nested_set_attributes, :update_parent_attributes, :create_journal, :update_tracker_and_parent
+  after_destroy :destroy_children, :update_parent_attributes
+  after_initialize :set_default_values
   
   # Returns true if usr or current user is allowed to view the issue
   def visible?(usr=nil)
     (usr || User.current).allowed_to?(:view_issues, self.project)
-  end
-  
-  def after_initialize
-    if new_record?
-      # set default values for new records only
-      self.status ||= IssueStatus.default
-      self.priority ||= IssuePriority.default
-    end
   end
   
   # Overrides Redmine::Acts::Customizable::InstanceMethods#available_custom_fields
@@ -263,41 +255,6 @@ class Issue < ActiveRecord::Base
   
   def validate_on_create
     errors.add :tracker_id, :invalid unless project.trackers.include?(tracker)
-  end
-  
-  def before_create
-    # default assignment based on category
-    if assigned_to.nil? && category && category.assigned_to
-      self.assigned_to = category.assigned_to
-    end
-  end
-  
-  def after_save
-    # Reload is needed in order to get the right status
-    reload
-    
-    # Checks that the issue can not be added/moved to a disabled tracker
-    if project && (tracker_id_changed? || project_id_changed?)
-      unless project.trackers.include?(tracker)
-        errors.add :tracker_id, :inclusion
-      end
-    end
-    
-    # Checks parent issue assignment
-    if @parent_issue
-      if @parent_issue.project_id != project_id
-        errors.add :parent_issue_id, :not_same_project
-      elsif !new_record?
-        # moving an existing issue
-        if @parent_issue.root_id != root_id
-          # we can always move to another tree
-        elsif move_possible?(@parent_issue)
-          # move accepted inside tree
-        else
-          errors.add :parent_issue_id, :not_a_valid_parent
-        end
-      end
-    end
   end
   
   # Set the done_ratio using the status if that setting is set.  This will keep the done_ratios
@@ -829,7 +786,7 @@ class Issue < ActiveRecord::Base
 
     where = "i.#{select_field}=j.id"
     
-    ActiveRecord::Base.connection.select_all("select    s.id as status_id, 
+    ActiveRecord::Base.connection.select_all("select s.id as status_id, 
                                                 s.is_closed as closed, 
                                                 j.id as #{select_field},
                                                 count(i.id) as total 
@@ -842,5 +799,39 @@ class Issue < ActiveRecord::Base
                                               group by s.id, s.is_closed, j.id")
   end
   
-
+  def set_default_values
+    if new_record?
+      # set default values for new records only
+      self.status ||= IssueStatus.default
+      self.priority ||= IssuePriority.default
+    end
+  end
+  
+  def update_tracker_and_parent
+    # Reload is needed in order to get the right status
+    reload
+    
+    # Checks that the issue can not be added/moved to a disabled tracker
+    if project && (tracker_id_changed? || project_id_changed?)
+      unless project.trackers.include?(tracker)
+        errors.add :tracker_id, :inclusion
+      end
+    end
+    
+    # Checks parent issue assignment
+    if @parent_issue
+      if @parent_issue.project_id != project_id
+        errors.add :parent_issue_id, :not_same_project
+      elsif !new_record?
+        # moving an existing issue
+        if @parent_issue.root_id != root_id
+          # we can always move to another tree
+        elsif move_possible?(@parent_issue)
+          # move accepted inside tree
+        else
+          errors.add :parent_issue_id, :not_a_valid_parent
+        end
+      end
+    end
+  end
 end

@@ -23,8 +23,6 @@ class Enumeration < ActiveRecord::Base
   acts_as_list :scope => 'type = \'#{type}\''
   acts_as_customizable
   acts_as_tree :order => 'position ASC'
-
-  before_destroy :check_integrity
   
   validates_presence_of :name
   validates_uniqueness_of :name, :scope => [:type, :project_id]
@@ -32,6 +30,9 @@ class Enumeration < ActiveRecord::Base
 
   named_scope :shared, :conditions => { :project_id => nil }
   named_scope :active, :conditions => { :active => true }
+  
+  before_destroy :check_integrity
+  before_save :check_default
 
   def self.default
     # Creates a fake default scope so Enumeration.default will check
@@ -48,12 +49,6 @@ class Enumeration < ActiveRecord::Base
   # Overloaded on concrete classes
   def option_name
     nil
-  end
-
-  def before_save
-    if is_default? && is_default_changed?
-      Enumeration.update_all("is_default = #{connection.quoted_false}", {:type => type})
-    end
   end
   
   # Overloaded on concrete classes
@@ -121,11 +116,17 @@ class Enumeration < ActiveRecord::Base
     return new == previous
   end
   
-private
+  private
+  
   def check_integrity
     raise "Can't delete enumeration" if self.in_use?
   end
-
+  
+  def check_default
+    if is_default? && is_default_changed?
+      Enumeration.update_all("is_default = #{connection.quoted_false}", {:type => type})
+    end
+  end
 end
 
 # Force load the subclasses in development mode

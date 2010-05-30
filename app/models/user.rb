@@ -64,16 +64,9 @@ class User < Principal
   validates_length_of :mail, :maximum => 60, :allow_nil => true
   validates_confirmation_of :password, :allow_nil => true
   validate :validate_password_length
-
-  def before_create
-    self.mail_notification = false
-    true
-  end
   
-  def before_save
-    # update hashed_password if password was set
-    self.hashed_password = User.hash_password(self.password) if self.password && self.auth_source_id.blank?
-  end
+  before_save :update_hashed_password
+  before_create :set_mail_notification
   
   def reload(*args)
     @name = nil
@@ -347,6 +340,16 @@ class User < Principal
   # Return password digest
   def self.hash_password(clear_password)
     Digest::SHA1.hexdigest(clear_password || "")
+  end
+  
+  def update_hashed_password
+    # update hashed_password if password was set
+    self.hashed_password = User.hash_password(self.password) if self.password && self.auth_source_id.blank?
+  end
+  
+  def set_mail_notification
+    self.mail_notification = false
+    true
   end
 end
 

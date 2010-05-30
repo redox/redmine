@@ -25,10 +25,8 @@ class IssueStatus < ActiveRecord::Base
   validates_length_of :name, :maximum => 30
   validates_format_of :name, :with => /^[\w\s\'\-]*$/i
   validates_inclusion_of :default_done_ratio, :in => 0..100, :allow_nil => true
-
-  def after_save
-    IssueStatus.update_all("is_default=#{connection.quoted_false}", ['id <> ?', id]) if self.is_default?
-  end  
+  
+  after_save :update_default  
   
   # Returns the default status for new issues
   def self.default
@@ -85,8 +83,13 @@ class IssueStatus < ActiveRecord::Base
   
   def to_s; name end
 
-private
+  private
+  
   def check_integrity
     raise "Can't delete status" if Issue.find(:first, :conditions => ["status_id=?", self.id])
+  end
+  
+  def update_default
+    IssueStatus.update_all("is_default=#{connection.quoted_false}", ['id <> ?', id]) if self.is_default?
   end
 end

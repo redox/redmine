@@ -39,19 +39,9 @@ class TimeEntry < ActiveRecord::Base
   validates_numericality_of :hours, :allow_nil => true, :message => :invalid
   validates_length_of :comments, :maximum => 255, :allow_nil => true
   validate :validate_time_entry
-
-  def after_initialize
-    if new_record? && self.activity.nil?
-      if default_activity = TimeEntryActivity.default
-        self.activity_id = default_activity.id
-      end
-      self.hours = nil if hours == 0
-    end
-  end
   
-  def before_validation
-    self.project = issue.project if issue && project.nil?
-  end
+  before_validation :update_project
+  after_initialize :update_activity
   
   def validate_time_entry
     errors.add :hours, :invalid if hours && (hours < 0 || hours >= 1000)
@@ -80,6 +70,21 @@ class TimeEntry < ActiveRecord::Base
   def self.visible_by(usr)
     with_scope(:find => { :conditions => Project.allowed_to_condition(usr, :view_time_entries) }) do
       yield
+    end
+  end
+  
+  private
+  
+  def update_project
+    self.project = issue.project if issue && project.nil?
+  end
+  
+  def update_activity
+    if new_record? && self.activity.nil?
+      if default_activity = TimeEntryActivity.default
+        self.activity_id = default_activity.id
+      end
+      self.hours = nil if hours == 0
     end
   end
 end

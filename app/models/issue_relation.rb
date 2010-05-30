@@ -44,6 +44,8 @@ class IssueRelation < ActiveRecord::Base
   
   attr_protected :issue_from_id, :issue_to_id
   
+  before_save :handle_issue_order
+  
   def other_issue(issue)
     (self.issue_from_id == issue.id) ? issue_to : issue_from
   end
@@ -61,17 +63,6 @@ class IssueRelation < ActiveRecord::Base
   
   def label_for(issue)
     TYPES[relation_type] ? TYPES[relation_type][(self.issue_from_id == issue.id) ? :name : :sym_name] : :unknow
-  end
-  
-  def before_save
-    reverse_if_needed
-    
-    if TYPE_PRECEDES == relation_type
-      self.delay ||= 0
-    else
-      self.delay = nil
-    end
-    set_issue_to_dates
   end
   
   def set_issue_to_dates
@@ -109,5 +100,16 @@ class IssueRelation < ActiveRecord::Base
       errors.add_to_base :circular_dependency if issue_to.all_dependent_issues.include? issue_from
       errors.add_to_base :cant_link_an_issue_with_a_descendant if issue_from.is_descendant_of?(issue_to) || issue_from.is_ancestor_of?(issue_to)
     end
+  end
+  
+  def handle_issue_order
+    reverse_if_needed
+    
+    if TYPE_PRECEDES == relation_type
+      self.delay ||= 0
+    else
+      self.delay = nil
+    end
+    set_issue_to_dates
   end
 end
