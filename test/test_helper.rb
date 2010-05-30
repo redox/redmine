@@ -84,7 +84,7 @@ class ActiveSupport::TestCase
   
   # Returns the path to the test +vendor+ repository
   def self.repository_path(vendor)
-    File.join(RAILS_ROOT.gsub(%r{config\/\.\.}, ''), "/tmp/test/#{vendor.downcase}_repository")
+    File.join(Rails.root.gsub(%r{config\/\.\.}, ''), "/tmp/test/#{vendor.downcase}_repository")
   end
   
   # Returns true if the +vendor+ test repository is configured
