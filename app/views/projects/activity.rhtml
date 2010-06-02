@@ -34,7 +34,7 @@
 </div>
 &nbsp;
 <% other_formats_links do |f| %>
-	<%= f.link_to 'Atom', :url => params.merge(:from => nil, :key => User.current.rss_key) %>
+	<% f.link_to 'Atom', :url => params.merge(:from => nil, :key => User.current.rss_key) %>
 <% end %>
 
 <% content_for :header_tags do %>

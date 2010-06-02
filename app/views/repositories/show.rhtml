@@ -27,7 +27,7 @@
 <% end %>
 
 <% other_formats_links do |f| %>
-	<%= f.link_to 'Atom', :url => {:action => 'revisions', :id => @project, :key => User.current.rss_key} %>
+	<% f.link_to 'Atom', :url => {:action => 'revisions', :id => @project, :key => User.current.rss_key} %>
 <% end %>
 <% end %>
 

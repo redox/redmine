@@ -355,9 +355,8 @@ module ApplicationHelper
   end
   
   def other_formats_links(&block)
-    concat('<p class="other-formats">'.html_safe + l(:label_export_to))
-    yield Redmine::Views::OtherFormatsBuilder.new(self)
-    concat('</p>'.html_safe)
+    html = yield Redmine::Views::OtherFormatsBuilder.new(self)
+    "<p class='other-formats'>#{l(:label_export_to)} #{html}</p>".html_safe
   end
   
   def page_header_title
@@ -453,7 +452,7 @@ module ApplicationHelper
     while tag = tags.pop
       parsed << "</#{tag}>"
     end
-    parsed
+    parsed.html_safe
   end
   
   def parse_inline_attachments(text, project, obj, attr, only_path, options)
@@ -470,9 +469,9 @@ module ApplicationHelper
           if !desc.blank? && alttext.blank?
             alt = " title=\"#{desc}\" alt=\"#{desc}\""
           end
-          "src=\"#{image_url}\"#{alt}"
+          "src=\"#{image_url}\"#{alt}".html_safe
         else
-          m
+          m.html_safe
         end
       end
     end
@@ -516,10 +515,10 @@ module ApplicationHelper
           link_to((title || page), url, :class => ('wiki-page' + (wiki_page ? '' : ' new')))
         else
           # project or wiki doesn't exist
-          all
+          all.html_safe
         end
       else
-        all
+        all.html_safe
       end
     end
   end
@@ -641,7 +640,7 @@ module ApplicationHelper
           end
         end
       end
-      leading + (link || "#{prefix}#{sep}#{identifier}")
+      (leading + (link || "#{prefix}#{sep}#{identifier}")).html_safe
     end
   end
 
