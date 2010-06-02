@@ -12,7 +12,9 @@ end
 
 group :test do
 
-  gem 'shoulda'
+  #gem 'shoulda' # shoulda is not Rails 3-compatible
+  gem 'ruby-prof', '0.8.1.wycats'
+  gem 'test-unit'
   gem 'edavis10-object_daddy', :require => 'object_daddy'
   gem 'mocha'
 end
