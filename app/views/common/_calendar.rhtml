@@ -6,7 +6,7 @@
 <tr>
 <% day = calendar.startdt
 while day <= calendar.enddt %>
-<%= "<th>#{day.cweek}</th>" if day.cwday == calendar.first_wday %>
+<%= "<th>#{day.cweek}</th>".html_safe if day.cwday == calendar.first_wday %>
 <td class="<%= day.month==calendar.month ? 'even' : 'odd' %><%= ' today' if Date.today == day %>">
 <p class="day-num"><%= day.day %></p>	
 <% calendar.events_on(day).each do |i| %>
@@ -24,7 +24,7 @@ while day <= calendar.enddt %>
   <% end %>
 <% end %>
 </td>
-<%= '</tr><tr>' if day.cwday==calendar.last_wday and day!=calendar.enddt %>
+<%= '</tr><tr>'.html_safe if day.cwday==calendar.last_wday and day!=calendar.enddt %>
 <% day = day + 1
 end %>
 </tr>
