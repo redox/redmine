@@ -268,7 +268,7 @@ class Query < ActiveRecord::Base
 
   def available_columns
     return @available_columns if @available_columns
-    @available_columns = Query.available_columns
+    @available_columns = self.available_columns
     @available_columns += (project ? 
                             project.all_issue_custom_fields :
                             IssueCustomField.find(:all)
@@ -471,7 +471,7 @@ class Query < ActiveRecord::Base
     order_option = nil if order_option.blank?
     
     Issue.find :all, :include => ([:status, :project] + (options[:include] || [])).uniq,
-                     :conditions => Query.merge_conditions(statement, options[:conditions]),
+                     :conditions => merge_conditions(statement, options[:conditions]),
                      :order => order_option,
                      :limit  => options[:limit],
                      :offset => options[:offset]
@@ -495,7 +495,7 @@ class Query < ActiveRecord::Base
   # Valid options are :conditions
   def versions(options={})
     Version.find :all, :include => :project,
-                       :conditions => Query.merge_conditions(project_statement, options[:conditions])
+                       :conditions => merge_conditions(project_statement, options[:conditions])
   rescue ::ActiveRecord::StatementInvalid => e
     raise StatementInvalid.new(e.message)
   end
@@ -589,5 +589,18 @@ class Query < ActiveRecord::Base
   def is_project_nil
     # Store the fact that project is nil (used in #editable_by?)
     @is_for_all = project.nil?
+  end
+  
+  def merge_conditions(*conditions)
+    segments = []
+
+    conditions.each do |condition|
+      unless condition.blank?
+        sql = self.class.send(:sanitize_sql, condition)
+        segments << sql unless sql.blank?
+      end
+    end
+
+    "(#{segments.join(') AND (')})" unless segments.empty?
   end
 end
