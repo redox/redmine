@@ -1,3 +1,4 @@
+# coding: UTF-8
 # redMine - project management software
 # Copyright (C) 2006-2007  Jean-Philippe Lang
 #
@@ -308,7 +309,7 @@ module ApplicationHelper
 
     html = ''
     if paginator.current.previous
-      html << link_to_remote_content_update('&#171; ' + l(:label_previous), url_param.merge(page_param => paginator.current.previous)) + ' '
+      html << link_to_remote_content_update('« ' + l(:label_previous), url_param.merge(page_param => paginator.current.previous)) + ' '
     end
 
     html << (pagination_links_each(paginator, options) do |n|
@@ -316,7 +317,7 @@ module ApplicationHelper
     end || '')
     
     if paginator.current.next
-      html << ' ' + link_to_remote_content_update((l(:label_next) + ' &#187;'), url_param.merge(page_param => paginator.current.next))
+      html << ' ' + link_to_remote_content_update((l(:label_next) + ' »'), url_param.merge(page_param => paginator.current.next))
     end
 
     unless count.nil?
