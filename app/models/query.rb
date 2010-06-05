@@ -138,6 +138,7 @@ class Query < ActiveRecord::Base
     QueryColumn.new(:created_on, :sortable => "#{Issue.table_name}.created_on", :default_order => 'desc'),
   ]
   cattr_reader :available_columns
+  attr_accessor :subject, :created_on, :updated_on, :start_date, :due_date, :estimated_hours, :done_ratio
   
   after_initialize :is_project_nil
   
@@ -146,6 +147,7 @@ class Query < ActiveRecord::Base
     self.filters ||= { 'status_id' => {:operator => "o", :values => [""]} }
   end
   
+  # FIXME: not working as expected, this needs to be completely refactored for Rails 3
   def validate_query_filters
     filters.each_key do |field|
       errors.add label_for(field), :blank unless 
@@ -268,11 +270,11 @@ class Query < ActiveRecord::Base
 
   def available_columns
     return @available_columns if @available_columns
-    @available_columns = self.available_columns
-    @available_columns += (project ? 
-                            project.all_issue_custom_fields :
-                            IssueCustomField.find(:all)
-                           ).collect {|cf| QueryCustomFieldColumn.new(cf) }      
+    print "BLOW"
+    @available_columns = @@available_columns
+    #@available_columns += (IssueCustomField.find(:all)
+    #                       ).collect {|cf| QueryCustomFieldColumn.new(cf)}
+    puts "BLOW2"    
   end
 
   def self.available_columns=(v)
@@ -290,6 +292,7 @@ class Query < ActiveRecord::Base
 
   # Returns a Hash of columns and the key for sorting
   def sortable_columns
+    puts available_columns
     {'id' => "#{Issue.table_name}.id"}.merge(available_columns.inject({}) {|h, column|
                                                h[column.name.to_s] = column.sortable
                                                h
