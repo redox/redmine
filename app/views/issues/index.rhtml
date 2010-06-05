@@ -54,7 +54,8 @@
     </p>
 <% end %>
 
-<%= error_messages_for 'query' %>
+<!-- 'query' should be down there, this is a hack -->
+<%= error_messages_for %>
 <% if @query.valid? %>
 <% if @issues.empty? %>
 <p class="nodata"><%= l(:label_no_data) %></p>
@@ -64,9 +65,7 @@
 <% end %>
 
 <%= other_formats_links do |f| %>
-	<% f.link_to('Atom', :url => { :project_id => @project, :query_id => (@query.new_record? ? nil : @query), :key => User.current.rss_key })
-	+ f.link_to('CSV', :url => { :project_id => @project })
-	+ f.link_to('PDF', :url => { :project_id => @project }) %>
+	<% f.link_to('Atom', :url => { :project_id => @project, :query_id => (@query.new_record? ? nil : @query), :key => User.current.rss_key }) + f.link_to('CSV', :url => { :project_id => @project }) + f.link_to('PDF', :url => { :project_id => @project }) %>
 <% end %>
 
 <% end %>

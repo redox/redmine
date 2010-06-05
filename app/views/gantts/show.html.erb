@@ -226,14 +226,13 @@ if Date.today >= @gantt.date_from and Date.today <= @gantt.date_to %>
 
 <table width="100%">
 <tr>
-<td align="left"><%= link_to_remote ('&#171; ' + l(:label_previous)), {:url => @gantt.params_previous, :update => 'content', :complete => 'window.scrollTo(0,0)'}, {:href => url_for(@gantt.params_previous)} %></td>
-<td align="right"><%= link_to_remote (l(:label_next) + ' &#187;'), {:url => @gantt.params_next, :update => 'content', :complete => 'window.scrollTo(0,0)'}, {:href => url_for(@gantt.params_next)} %></td>
+<td align="left"><%= link_to_remote ('« ' + l(:label_previous)), {:url => @gantt.params_previous, :update => 'content', :complete => 'window.scrollTo(0,0)'}, {:href => url_for(@gantt.params_previous)} %></td>
+<td align="right"><%= link_to_remote (l(:label_next) + ' »'), {:url => @gantt.params_next, :update => 'content', :complete => 'window.scrollTo(0,0)'}, {:href => url_for(@gantt.params_next)} %></td>
 </tr>
 </table>
 
 <%= other_formats_links do |f| %>
-	<% f.link_to('PDF', :url => @gantt.params) 
-	+ @gantt.respond_to?('to_image')) ? f.link_to('PNG', :url => @gantt.params) : "" %>
+	<% f.link_to('PDF', :url => @gantt.params) + @gantt.respond_to?('to_image')) ? f.link_to('PNG', :url => @gantt.params) : "" %>
 <% end %>
 <% end # query.valid? %>
 
