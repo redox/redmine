@@ -280,7 +280,7 @@ module ApplicationHelper
   end
 
   def authoring(created, author, options={})
-    l(options[:label] || :label_added_time_by, :author => link_to_user(author), :age => time_tag(created))
+    l(options[:label] || :label_added_time_by, :author => link_to_user(author), :age => time_tag(created)).html_safe
   end
   
   def time_tag(time)
@@ -677,7 +677,7 @@ module ApplicationHelper
 
   def check_all_links(form_name)
     link_to_function(l(:button_check_all), "checkAll('#{form_name}', true)") +
-    " | " +
+    " | ".html_safe +
     link_to_function(l(:button_uncheck_all), "checkAll('#{form_name}', false)")
   end
 
@@ -691,10 +691,10 @@ module ApplicationHelper
     content_tag('table',
       content_tag('tr',
         (pcts[0] > 0 ? content_tag('td', '', :style => "width: #{pcts[0]}%;", :class => 'closed') : '') +
-        (pcts[1] > 0 ? content_tag('td', '', :style => "width: #{pcts[1]}%;", :class => 'done') : '') +
-        (pcts[2] > 0 ? content_tag('td', '', :style => "width: #{pcts[2]}%;", :class => 'todo') : '')
-      ), :class => 'progress', :style => "width: #{width};") +
-      content_tag('p', legend, :class => 'pourcent')
+        (pcts[1] > 0 ? content_tag('td', '', :style => "width: #{pcts[1]}%;", :class => 'done') : ''.html_safe) +
+        (pcts[2] > 0 ? content_tag('td', '', :style => "width: #{pcts[2]}%;", :class => 'todo') : ''.html_safe)
+      ), :class => 'progress', :style => "width: #{width};").html_safe +
+      content_tag('p', legend, :class => 'pourcent').html_safe
   end
   
   def checked_image(checked=true)
