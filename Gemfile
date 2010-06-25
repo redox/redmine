@@ -15,8 +15,6 @@ end
 group :test do
   gem 'test-unit'
   gem 'mocha'
+  gem 'shoulda'
   gem 'object_daddy', :git => 'http://github.com/edavis10/object_daddy.git'
-
-  # shoulda is not Rails 3-compatible
-  #gem 'shoulda'
 end
