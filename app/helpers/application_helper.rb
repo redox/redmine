@@ -185,6 +185,7 @@ module ApplicationHelper
   end
   
   # Renders the project quick-jump box
+  # FIXME: should be a partial
   def render_project_jump_box
     # Retrieve them now to avoid a COUNT query
     projects = User.current.projects.all
@@ -196,7 +197,7 @@ module ApplicationHelper
         { :value => url_for(:controller => 'projects', :action => 'show', :id => p, :jump => current_menu_item) }
       end
       s << '</select>'
-      s
+      s.html_safe
     end
   end
   
@@ -213,7 +214,7 @@ module ApplicationHelper
       tag_options.merge!(yield(project)) if block_given?
       s << content_tag('option', name_prefix + h(project), tag_options)
     end
-    s
+    s.html_safe
   end
   
   # Yields the given block for each project with its level in the tree
@@ -249,7 +250,7 @@ module ApplicationHelper
       end
       s << ("</li></ul>\n" * ancestors.size)
     end
-    s
+    s.html_safe
   end
   
   def principals_check_box_tags(name, principals)
@@ -257,7 +258,7 @@ module ApplicationHelper
     principals.sort.each do |principal|
       s << "<label>#{ check_box_tag name, principal.id, false } #{h principal}</label>\n"
     end
-    s 
+    s.html_safe
   end
 
   # Truncates and returns the string as a single line
@@ -276,7 +277,7 @@ module ApplicationHelper
   end
 
   def html_hours(text)
-    text.gsub(%r{(\d+)\.(\d+)}, '<span class="hours hours-int">\1</span><span class="hours hours-dec">.\2</span>')
+    text.gsub(%r{(\d+)\.(\d+)}, '<span class="hours hours-int">\1</span><span class="hours hours-dec">.\2</span>').html_safe
   end
 
   def authoring(created, author, options={})
