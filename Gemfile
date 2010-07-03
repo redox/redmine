@@ -15,6 +15,6 @@ end
 group :test do
   gem 'test-unit'
   gem 'mocha'
-  gem 'shoulda'
+  gem 'shoulda', '~> 2.10.3'
   gem 'object_daddy', :git => 'http://github.com/edavis10/object_daddy.git'
 end
