@@ -1,4 +1,5 @@
 .bundle
+Gemfile.lock
 /config/additional_environment.rb
 /config/database.yml
 /config/email.yml
