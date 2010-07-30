@@ -16,3 +16,4 @@ Gemfile.lock
 /tmp/sessions/*
 /tmp/sockets/*
 /tmp/test/*
+/installed_gems
