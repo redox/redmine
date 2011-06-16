@@ -10,6 +10,7 @@ gem 'rack'
 # gem 'i18n', '>= 0.4.2'
 gem 'i18n'
 gem 'rubytree', '0.5.2', :require => 'tree'
+gem 'rdoc',    '>= 2.4.2'
 gem 'coderay', '~> 0.9.7'
 
 group :development do
