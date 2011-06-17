@@ -1,13 +1,25 @@
+# source 'http://rubygems.org'
 source :rubygems
 source :rubyforge
 source :gemcutter
 
-gem 'bundler', '~> 1.0.0'
-gem 'rails', '2.3.11'
-gem 'rack' , '~> 1.1.1'
-gem 'i18n', '>= 0.4.2'
-gem 'rubytree', '0.5.2', :require => 'tree'
+# gem 'bundler', '~> 1.0.0'
+# gem 'rails', '2.3.4'
+# gem 'rails', '2.3.11'
+# gem 'rails', '3.0.6'
+gem 'rails', '3.0.9'
+
+gem 'rubytree', '0.7.0'
+# gem 'rack' , '~> 1.1.1'
+# gem 'rack'
+# gem 'i18n', '>= 0.4.2'
+# gem 'i18n'
+# gem 'rubytree', '0.5.2', :require => 'tree'
 gem 'coderay', '~> 0.9.7'
+
+# gem 'ruby-prof', :git => 'http://github.com/wycats/ruby-prof.git'
+gem 'ruby-prof'
+gem 'jquery-rails'
 
 group :development do
 end
@@ -16,6 +28,7 @@ group :production do
 end
 
 group :test do
+  gem 'test-unit'
   # gem 'shoulda', '~> 2.10.3'
   gem 'shoulda'
   gem 'mocha'
@@ -23,7 +36,7 @@ group :test do
 end
 
 group :openid do
-  gem "ruby-openid", '~> 2.1.4', :require => 'openid'
+  # gem "ruby-openid", '~> 2.1.4', :require => 'openid'
 end
 
 group :rmagick do
@@ -52,7 +65,8 @@ platforms :mri do
   end
 
   group :sqlite do
-    gem "sqlite3-ruby", "< 1.3", :require => "sqlite3"
+    # gem "sqlite3-ruby", "< 1.3", :require => "sqlite3"
+    gem "sqlite3-ruby"
     #   please tell me, if you are fond of a pure ruby sqlite3 binding
   end
 end
