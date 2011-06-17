@@ -24,5 +24,5 @@ api.array :issues, api_meta(:total_count => @issue_count, :offset => @offset, :l
       api.created_on issue.created_on
       api.updated_on issue.updated_on
     end
-  end
+  end if not @issues.nil?
 end
