@@ -20,3 +20,4 @@
 /tmp/sockets/*
 /tmp/test/*
 /vendor/rails
+*.rbc

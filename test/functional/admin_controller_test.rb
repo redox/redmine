@@ -38,13 +38,6 @@ class AdminControllerTest < ActionController::TestCase
                   :attributes => { :class => /nodata/ }
   end
   
-  def test_projects_routing
-    assert_routing(
-      {:method => :get, :path => '/admin/projects'},
-      :controller => 'admin', :action => 'projects'
-    )
-  end
-  
   def test_index_with_no_configuration_data
     delete_configuration_data
     get :index
@@ -74,6 +67,8 @@ class AdminControllerTest < ActionController::TestCase
   def test_load_default_configuration_data
     delete_configuration_data
     post :default_configuration, :lang => 'fr'
+    assert_response :redirect
+    assert_nil flash[:error]
     assert IssueStatus.find_by_name('Nouveau')
   end
   
@@ -118,6 +113,21 @@ class AdminControllerTest < ActionController::TestCase
     get :info
     assert_response :success
     assert_template 'info'
+  end
+  
+  def test_admin_menu_plugin_extension
+    Redmine::MenuManager.map :admin_menu do |menu|
+      menu.push :test_admin_menu_plugin_extension, '/foo/bar', :caption => 'Test'
+    end
+    
+    get :index
+    assert_response :success
+    assert_tag :a, :attributes => { :href => '/foo/bar' },
+                   :content => 'Test'
+    
+    Redmine::MenuManager.map :admin_menu do |menu|
+      menu.delete :test_admin_menu_plugin_extension
+    end
   end
   
   private

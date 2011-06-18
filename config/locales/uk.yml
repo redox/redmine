@@ -1,4 +1,5 @@
 uk:
+  direction: ltr
   date:
     formats:
       # Use the strftime parameters for formats.
@@ -59,8 +60,15 @@ uk:
       over_x_years:
         one:   "over 1 year"
         other: "over {{count}} years"
+      almost_x_years:
+        one:   "almost 1 year"
+        other: "almost {{count}} years"
 
   number: 
+    format:
+      separator: "."
+      delimiter: ""
+      precision: 3
     human: 
       format: 
         precision: 1
@@ -108,6 +116,7 @@ uk:
         greater_than_start_date: "повинна бути пізніша за дату початку"
         not_same_project: "не відносяться до одного проекту"
         circular_dependency: "Такий зв'язок приведе до циклічної залежності"
+        cant_link_an_issue_with_a_descendant: "An issue can not be linked to one of its subtasks"
 
   actionview_instancetag_blank_option: Оберіть
   
@@ -197,7 +206,6 @@ uk:
   field_homepage: Домашня сторінка
   field_is_public: Публічний
   field_parent: Підпроект
-  field_is_in_chlog: Питання, що відображаються в журналі змін
   field_is_in_roadmap: Питання, що відображаються в оперативному плані
   field_login: Вхід 
   field_mail_notification: Повідомлення за електронною поштою
@@ -219,7 +227,6 @@ uk:
   field_attr_lastname: Атрибут Прізвище
   field_attr_mail: Атрибут Email
   field_onthefly: Створення користувача на льоту
-  field_start_date: Початок
   field_done_ratio: % зроблено
   field_auth_source: Режим аутентифікації
   field_hide_mail: Приховувати мій email
@@ -362,7 +369,6 @@ uk:
   label_news_plural: Новини
   label_news_latest: Останні новини
   label_news_view_all: Подивитися всі новини
-  label_change_log: Журнал змін
   label_settings: Налаштування
   label_overview: Перегляд
   label_version: Версія
@@ -537,7 +543,6 @@ uk:
   label_search_titles_only: Шукати тільки в назвах
   label_user_mail_option_all: "Для всіх подій у всіх моїх проектах"
   label_user_mail_option_selected: "Для всіх подій тільки у вибраному проекті..."
-  label_user_mail_option_none: "Тільки для того, що я проглядаю або в чому я беру участь"
   label_user_mail_no_self_notified: "Не сповіщати про зміни, які я зробив сам"
   label_registration_activation_by_email: активація облікового запису електронною поштою
   label_registration_manual_activation: ручна активація облікового запису
@@ -590,9 +595,9 @@ uk:
   text_project_destroy_confirmation: Ви наполягаєте на видаленні цього проекту і всієї інформації, що відноситься до нього?
   text_workflow_edit: Виберіть роль і координатор для редагування послідовності дій
   text_are_you_sure: Ви впевнені?
-  text_tip_task_begin_day: день початку задачі
-  text_tip_task_end_day: день завершення задачі
-  text_tip_task_begin_end_day: початок задачі і закінчення цього дня
+  text_tip_issue_begin_day: день початку задачі
+  text_tip_issue_end_day: день завершення задачі
+  text_tip_issue_begin_end_day: початок задачі і закінчення цього дня
   text_project_identifier_info: 'Рядкові букви (a-z), допустимі цифри і дефіс.<br />Збережений ідентифікатор не може бути змінений.'
   text_caracters_maximum: "{{count}} символів(а) максимум."
   text_caracters_minimum: "Повинно мати якнайменше  {{count}} символів(а) у довжину."
@@ -610,7 +615,7 @@ uk:
   text_user_mail_option: "Для невибраних проектів ви отримуватимете повідомлення тільки про те, що проглядаєте або в чому берете участь (наприклад, питання автором яких ви є або які вам призначені)."
   
   default_role_manager: Менеджер
-  default_role_developper: Розробник
+  default_role_developer: Розробник
   default_role_reporter: Репортер
   звітів default_tracker_bug: Помилка
   default_tracker_feature: Властивість 
@@ -705,7 +710,7 @@ uk:
   text_subprojects_destroy_warning: "Its subproject(s): {{value}} will be also deleted."
   label_and_its_subprojects: "{{value}} and its subprojects"
   mail_body_reminder: "{{count}} issue(s) that are assigned to you are due in the next {{days}} days:"
-  mail_subject_reminder: "{{count}} issue(s) due in the next days"
+  mail_subject_reminder: "{{count}} issue(s) due in the next {{days}} days"
   text_user_wrote: "{{value}} wrote:"
   label_duplicated_by: duplicated by
   setting_enabled_scm: Enabled SCM
@@ -805,12 +810,12 @@ uk:
   text_wiki_page_destroy_children: Delete child pages and all their descendants
   setting_password_min_length: Minimum password length
   field_group_by: Group results by
-  mail_subject_wiki_content_updated: "'{{page}}' wiki page has been updated"
+  mail_subject_wiki_content_updated: "'{{id}}' wiki page has been updated"
   label_wiki_content_added: Wiki page added
-  mail_subject_wiki_content_added: "'{{page}}' wiki page has been added"
-  mail_body_wiki_content_added: The '{{page}}' wiki page has been added by {{author}}.
+  mail_subject_wiki_content_added: "'{{id}}' wiki page has been added"
+  mail_body_wiki_content_added: The '{{id}}' wiki page has been added by {{author}}.
   label_wiki_content_updated: Wiki page updated
-  mail_body_wiki_content_updated: The '{{page}}' wiki page has been updated by {{author}}.
+  mail_body_wiki_content_updated: The '{{id}}' wiki page has been updated by {{author}}.
   permission_add_project: Create project
   setting_new_project_user_role_id: Role given to a non-admin user who creates a project
   label_view_all_revisions: View all revisions
@@ -833,3 +838,88 @@ uk:
   version_status_locked: locked
   version_status_open: open
   error_can_not_reopen_issue_on_closed_version: An issue assigned to a closed version can not be reopened
+  label_user_anonymous: Anonymous
+  button_move_and_follow: Move and follow
+  setting_default_projects_modules: Default enabled modules for new projects
+  setting_gravatar_default: Default Gravatar image
+  field_sharing: Sharing
+  label_version_sharing_hierarchy: With project hierarchy
+  label_version_sharing_system: With all projects
+  label_version_sharing_descendants: With subprojects
+  label_version_sharing_tree: With project tree
+  label_version_sharing_none: Not shared
+  error_can_not_archive_project: This project can not be archived
+  button_duplicate: Duplicate
+  button_copy_and_follow: Copy and follow
+  label_copy_source: Source
+  setting_issue_done_ratio: Calculate the issue done ratio with
+  setting_issue_done_ratio_issue_status: Use the issue status
+  error_issue_done_ratios_not_updated: Issue done ratios not updated.
+  error_workflow_copy_target: Please select target tracker(s) and role(s)
+  setting_issue_done_ratio_issue_field: Use the issue field
+  label_copy_same_as_target: Same as target
+  label_copy_target: Target
+  notice_issue_done_ratios_updated: Issue done ratios updated.
+  error_workflow_copy_source: Please select a source tracker or role
+  label_update_issue_done_ratios: Update issue done ratios
+  setting_start_of_week: Start calendars on
+  permission_view_issues: View Issues
+  label_display_used_statuses_only: Only display statuses that are used by this tracker
+  label_revision_id: Revision {{value}}
+  label_api_access_key: API access key
+  label_api_access_key_created_on: API access key created {{value}} ago
+  label_feeds_access_key: RSS access key
+  notice_api_access_key_reseted: Your API access key was reset.
+  setting_rest_api_enabled: Enable REST web service
+  label_missing_api_access_key: Missing an API access key
+  label_missing_feeds_access_key: Missing a RSS access key
+  button_show: Show
+  text_line_separated: Multiple values allowed (one line for each value).
+  setting_mail_handler_body_delimiters: Truncate emails after one of these lines
+  permission_add_subprojects: Create subprojects
+  label_subproject_new: New subproject
+  text_own_membership_delete_confirmation: |-
+    You are about to remove some or all of your permissions and may no longer be able to edit this project after that.
+    Are you sure you want to continue?
+  label_close_versions: Close completed versions
+  label_board_sticky: Sticky
+  label_board_locked: Locked
+  permission_export_wiki_pages: Export wiki pages
+  setting_cache_formatted_text: Cache formatted text
+  permission_manage_project_activities: Manage project activities
+  error_unable_delete_issue_status: Unable to delete issue status
+  label_profile: Profile
+  permission_manage_subtasks: Manage subtasks
+  field_parent_issue: Parent task
+  label_subtask_plural: Subtasks
+  label_project_copy_notifications: Send email notifications during the project copy
+  error_can_not_delete_custom_field: Unable to delete custom field
+  error_unable_to_connect: Unable to connect ({{value}})
+  error_can_not_remove_role: This role is in use and can not be deleted.
+  error_can_not_delete_tracker: This tracker contains issues and can't be deleted.
+  field_principal: Principal
+  label_my_page_block: My page block
+  notice_failed_to_save_members: "Failed to save member(s): {{errors}}."
+  text_zoom_out: Zoom out
+  text_zoom_in: Zoom in
+  notice_unable_delete_time_entry: Unable to delete time log entry.
+  label_overall_spent_time: Overall spent time
+  field_time_entries: Log time
+  project_module_gantt: Gantt
+  project_module_calendar: Calendar
+  button_edit_associated_wikipage: "Edit associated Wiki page: {{page_title}}"
+  text_are_you_sure_with_children: Delete issue and all child issues?
+  field_text: Text field
+  label_user_mail_option_only_owner: Only for things I am the owner of
+  setting_default_notification_option: Default notification option
+  label_user_mail_option_only_my_events: Only for things I watch or I'm involved in
+  label_user_mail_option_only_assigned: Only for things I am assigned to
+  label_user_mail_option_none: No events
+  field_member_of_group: Assignee's group
+  field_assigned_to_role: Assignee's role
+  notice_not_authorized_archived_project: The project you're trying to access has been archived.
+  field_start_date: Start date
+  label_principal_search: "Search for user or group:"
+  label_user_search: "Search for user:"
+  field_visible: Visible
+  setting_emails_header: Emails header

@@ -25,23 +25,15 @@ class AccountController < ApplicationController
   # Login request and validation
   def login
     if request.get?
-      # Logout user
-      self.logged_user = nil
+      logout_user
     else
-      # Authenticate user
-      if Setting.openid? && using_open_id?
-        open_id_authenticate(params[:openid_url])
-      else
-        password_authentication
-      end
+      authenticate_user
     end
   end
 
   # Log out current user and redirect to welcome page
   def logout
-    cookies.delete :autologin
-    Token.delete_all(["user_id = ? AND action = ?", User.current.id, 'autologin']) if User.current.logged?
-    self.logged_user = nil
+    logout_user
     redirect_to home_url
   end
   
@@ -67,9 +59,9 @@ class AccountController < ApplicationController
       if request.post?
         user = User.find_by_mail(params[:mail])
         # user not found in db
-        flash.now[:error] = l(:notice_account_unknown_email) and return unless user
+        (flash.now[:error] = l(:notice_account_unknown_email); return) unless user
         # user uses an external authentification
-        flash.now[:error] = l(:notice_can_t_change_password) and return if user.auth_source_id
+        (flash.now[:error] = l(:notice_can_t_change_password); return) if user.auth_source_id
         # create a new token for password recovery
         token = Token.new(:user => user, :action => "recovery")
         if token.save
@@ -91,9 +83,9 @@ class AccountController < ApplicationController
     else
       @user = User.new(params[:user])
       @user.admin = false
-      @user.status = User::STATUS_REGISTERED
+      @user.register
       if session[:auth_source_registration]
-        @user.status = User::STATUS_ACTIVE
+        @user.activate
         @user.login = session[:auth_source_registration][:login]
         @user.auth_source_id = session[:auth_source_registration][:auth_source_id]
         if @user.save
@@ -124,8 +116,8 @@ class AccountController < ApplicationController
     token = Token.find_by_action_and_value('register', params[:token])
     redirect_to(home_url) && return unless token and !token.expired?
     user = token.user
-    redirect_to(home_url) && return unless user.status == User::STATUS_REGISTERED
-    user.status = User::STATUS_ACTIVE
+    redirect_to(home_url) && return unless user.registered?
+    user.activate
     if user.save
       token.destroy
       flash[:notice] = l(:notice_account_activated)
@@ -134,17 +126,30 @@ class AccountController < ApplicationController
   end
   
   private
+  
+  def logout_user
+    if User.current.logged?
+      cookies.delete :autologin
+      Token.delete_all(["user_id = ? AND action = ?", User.current.id, 'autologin'])
+      self.logged_user = nil
+    end
+  end
+  
+  def authenticate_user
+    if Setting.openid? && using_open_id?
+      open_id_authenticate(params[:openid_url])
+    else
+      password_authentication
+    end
+  end
 
   def password_authentication
     user = User.try_to_login(params[:username], params[:password])
+
     if user.nil?
-      # Invalid credentials
-      flash.now[:error] = l(:notice_account_invalid_creditentials)
+      invalid_credentials
     elsif user.new_record?
-      # Onthefly creation failed, display the registration form to fill/fix attributes
-      @user = user
-      session[:auth_source_registration] = {:login => user.login, :auth_source_id => user.auth_source_id }
-      render :action => 'register'
+      onthefly_creation_failed(user, {:login => user.login, :auth_source_id => user.auth_source_id })
     else
       # Valid user
       successful_authentication(user)
@@ -165,7 +170,7 @@ class AccountController < ApplicationController
           user.mail = registration['email'] unless registration['email'].nil?
           user.firstname, user.lastname = registration['fullname'].split(' ') unless registration['fullname'].nil?
           user.random_password
-          user.status = User::STATUS_REGISTERED
+          user.register
 
           case Setting.self_registration
           when '1'
@@ -212,6 +217,11 @@ class AccountController < ApplicationController
     render :action => 'register'
   end
 
+  def invalid_credentials
+    logger.warn "Failed login for '#{params[:username]}' from #{request.remote_ip} at #{Time.now.utc}"
+    flash.now[:error] = l(:notice_account_invalid_creditentials)
+  end
+
   # Register a user for email activation.
   #
   # Pass a block for behavior when a user fails to save
@@ -231,7 +241,7 @@ class AccountController < ApplicationController
   # Pass a block for behavior when a user fails to save
   def register_automatically(user, &block)
     # Automatic activation
-    user.status = User::STATUS_ACTIVE
+    user.activate
     user.last_login_on = Time.now
     if user.save
       self.logged_user = user

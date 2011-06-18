@@ -62,6 +62,10 @@ module Redmine
           @custom_field_values ||= available_custom_fields.collect { |x| custom_values.detect { |v| v.custom_field == x } || custom_values.build(:custom_field => x, :value => nil) }
         end
         
+        def visible_custom_field_values
+          custom_field_values.select(&:visible?)
+        end
+        
         def custom_field_values_changed?
           @custom_field_values_changed == true
         end
@@ -75,6 +79,13 @@ module Redmine
           custom_field_values.each(&:save)
           @custom_field_values_changed = false
           @custom_field_values = nil
+        end
+        
+        def reset_custom_values!
+          @custom_field_values = nil
+          @custom_field_values_changed = true
+          values = custom_values.inject({}) {|h,v| h[v.custom_field_id] = v.value; h}
+          custom_values.each {|cv| cv.destroy unless custom_field_values.include?(cv)}
         end
         
         module ClassMethods

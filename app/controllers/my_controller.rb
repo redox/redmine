@@ -35,7 +35,6 @@ class MyController < ApplicationController
                    }.freeze
 
   verify :xhr => true,
-         :session => :page_layout,
          :only => [:add_block, :remove_block, :order_blocks]
 
   def index
@@ -55,7 +54,7 @@ class MyController < ApplicationController
     @pref = @user.pref
     if request.post?
       @user.attributes = params[:user]
-      @user.mail_notification = (params[:notification_option] == 'all')
+      @user.mail_notification = params[:notification_option] || 'only_my_events'
       @user.pref.attributes = params[:pref]
       @user.pref[:no_self_notified] = (params[:no_self_notified] == '1')
       if @user.save
@@ -67,18 +66,18 @@ class MyController < ApplicationController
         return
       end
     end
-    @notification_options = [[l(:label_user_mail_option_all), 'all'],
-                             [l(:label_user_mail_option_none), 'none']]
-    # Only users that belong to more than 1 project can select projects for which they are notified
-    # Note that @user.membership.size would fail since AR ignores :include association option when doing a count
-    @notification_options.insert 1, [l(:label_user_mail_option_selected), 'selected'] if @user.memberships.length > 1
-    @notification_option = @user.mail_notification? ? 'all' : (@user.notified_projects_ids.empty? ? 'none' : 'selected')    
+    @notification_options = @user.valid_notification_options
+    @notification_option = @user.mail_notification #? ? 'all' : (@user.notified_projects_ids.empty? ? 'none' : 'selected')    
   end
 
   # Manage user's password
   def password
     @user = User.current
-    flash[:error] = l(:notice_can_t_change_password) and redirect_to :action => 'account' and return if @user.auth_source_id
+    unless @user.change_password_allowed?
+      flash[:error] = l(:notice_can_t_change_password)
+      redirect_to :action => 'account'
+      return
+    end
     if request.post?
       if @user.check_password?(params[:password])
         @user.password, @user.password_confirmation = params[:new_password], params[:new_password_confirmation]
@@ -94,9 +93,26 @@ class MyController < ApplicationController
   
   # Create a new feeds key
   def reset_rss_key
-    if request.post? && User.current.rss_token
-      User.current.rss_token.destroy
+    if request.post?
+      if User.current.rss_token
+        User.current.rss_token.destroy
+        User.current.reload
+      end
+      User.current.rss_key
       flash[:notice] = l(:notice_feeds_access_key_reseted)
+    end
+    redirect_to :action => 'account'
+  end
+
+  # Create a new API key
+  def reset_api_key
+    if request.post?
+      if User.current.api_token
+        User.current.api_token.destroy
+        User.current.reload
+      end
+      User.current.api_key
+      flash[:notice] = l(:notice_api_access_key_reseted)
     end
     redirect_to :action => 'account'
   end
@@ -105,8 +121,6 @@ class MyController < ApplicationController
   def page_layout
     @user = User.current
     @blocks = @user.pref[:my_page_layout] || DEFAULT_LAYOUT.dup
-    session[:page_layout] = @blocks
-    %w(top left right).each {|f| session[:page_layout][f] ||= [] }
     @block_options = []
     BLOCKS.each {|k, v| @block_options << [l("my.blocks.#{v}", :default => [v, v.to_s.humanize]), k.dasherize]}
   end
@@ -116,12 +130,15 @@ class MyController < ApplicationController
   # params[:block] : id of the block to add
   def add_block
     block = params[:block].to_s.underscore
-    render(:nothing => true) and return unless block && (BLOCKS.keys.include? block)
+    (render :nothing => true; return) unless block && (BLOCKS.keys.include? block)
     @user = User.current
+    layout = @user.pref[:my_page_layout] || {}
     # remove if already present in a group
-    %w(top left right).each {|f| (session[:page_layout][f] ||= []).delete block }
+    %w(top left right).each {|f| (layout[f] ||= []).delete block }
     # add it on top
-    session[:page_layout]['top'].unshift block
+    layout['top'].unshift block
+    @user.pref[:my_page_layout] = layout
+    @user.pref.save 
     render :partial => "block", :locals => {:user => @user, :block_name => block}
   end
   
@@ -129,8 +146,12 @@ class MyController < ApplicationController
   # params[:block] : id of the block to remove
   def remove_block
     block = params[:block].to_s.underscore
+    @user = User.current
     # remove block in all groups
-    %w(top left right).each {|f| (session[:page_layout][f] ||= []).delete block }
+    layout = @user.pref[:my_page_layout] || {}
+    %w(top left right).each {|f| (layout[f] ||= []).delete block }
+    @user.pref[:my_page_layout] = layout
+    @user.pref.save 
     render :nothing => true
   end
 
@@ -139,25 +160,20 @@ class MyController < ApplicationController
   # params[:list-(top|left|right)] : array of block ids of the group
   def order_blocks
     group = params[:group]
+    @user = User.current
     if group.is_a?(String)
       group_items = (params["list-#{group}"] || []).collect(&:underscore)
       if group_items and group_items.is_a? Array
+        layout = @user.pref[:my_page_layout] || {}
         # remove group blocks if they are presents in other groups
         %w(top left right).each {|f|
-          session[:page_layout][f] = (session[:page_layout][f] || []) - group_items
+          layout[f] = (layout[f] || []) - group_items
         }
-        session[:page_layout][group] = group_items    
+        layout[group] = group_items
+        @user.pref[:my_page_layout] = layout
+        @user.pref.save 
       end
     end
     render :nothing => true
-  end
-  
-  # Save user's page layout  
-  def page_layout_save
-    @user = User.current
-    @user.pref[:my_page_layout] = session[:page_layout] if session[:page_layout]
-    @user.pref.save
-    session[:page_layout] = nil
-    redirect_to :action => 'page'
   end
 end

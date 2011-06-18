@@ -39,8 +39,36 @@ class WikiTest < ActiveSupport::TestCase
     assert_equal "Another start page", @wiki.start_page
   end
   
+  def test_find_page
+    wiki = Wiki.find(1)
+    page = WikiPage.find(2)
+    
+    assert_equal page, wiki.find_page('Another_page')
+    assert_equal page, wiki.find_page('Another page')
+    assert_equal page, wiki.find_page('ANOTHER page')
+  end
+  
   def test_titleize
     assert_equal 'Page_title_with_CAPITALES', Wiki.titleize('page title with CAPITALES')
     assert_equal 'テスト', Wiki.titleize('テスト')
+  end
+  
+  context "#sidebar" do
+    setup do
+      @wiki = Wiki.find(1)
+    end
+    
+    should "return nil if undefined" do
+      assert_nil @wiki.sidebar
+    end
+    
+    should "return a WikiPage if defined" do
+      page = @wiki.pages.new(:title => 'Sidebar')
+      page.content = WikiContent.new(:text => 'Side bar content for test_show_with_sidebar')
+      page.save!
+      
+      assert_kind_of WikiPage, @wiki.sidebar
+      assert_equal 'Sidebar', @wiki.sidebar.title
+    end
   end
 end

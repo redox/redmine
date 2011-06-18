@@ -15,6 +15,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+require 'ar_condition'
+
 class Mailer < ActionMailer::Base
   layout 'mailer'
   helper :application
@@ -80,7 +82,7 @@ class Mailer < ActionMailer::Base
   def reminder(user, issues, days)
     set_language_if_valid user.language
     recipients user.mail
-    subject l(:mail_subject_reminder, issues.size)
+    subject l(:mail_subject_reminder, :count => issues.size, :days => days)
     body :issues => issues,
          :days => days,
          :issues_url => url_for(:controller => 'issues', :action => 'index', :set_filter => 1, :assigned_to_id => user.id, :sort_key => 'due_date', :sort_order => 'asc')
@@ -94,7 +96,7 @@ class Mailer < ActionMailer::Base
   #   Mailer.deliver_document_added(document) => sends an email to the document's project recipients
   def document_added(document)
     redmine_headers 'Project' => document.project.identifier
-    recipients document.project.recipients
+    recipients document.recipients
     subject "[#{document.project.name}] #{l(:label_document_new)}: #{document.title}"
     body :document => document,
          :document_url => url_for(:controller => 'documents', :action => 'show', :id => document)
@@ -114,15 +116,17 @@ class Mailer < ActionMailer::Base
     when 'Project'
       added_to_url = url_for(:controller => 'projects', :action => 'list_files', :id => container)
       added_to = "#{l(:label_project)}: #{container}"
+      recipients container.project.notified_users.select {|user| user.allowed_to?(:view_files, container.project)}.collect  {|u| u.mail}
     when 'Version'
       added_to_url = url_for(:controller => 'projects', :action => 'list_files', :id => container.project_id)
       added_to = "#{l(:label_version)}: #{container.name}"
+      recipients container.project.notified_users.select {|user| user.allowed_to?(:view_files, container.project)}.collect  {|u| u.mail}
     when 'Document'
       added_to_url = url_for(:controller => 'documents', :action => 'show', :id => container.id)
       added_to = "#{l(:label_document)}: #{container.title}"
+      recipients container.recipients
     end
     redmine_headers 'Project' => container.project.identifier
-    recipients container.project.recipients
     subject "[#{container.project.name}] #{l(:label_attachment_new)}"
     body :attachments => attachments,
          :added_to => added_to,
@@ -138,27 +142,28 @@ class Mailer < ActionMailer::Base
   def news_added(news)
     redmine_headers 'Project' => news.project.identifier
     message_id news
-    recipients news.project.recipients
+    recipients news.recipients
     subject "[#{news.project.name}] #{l(:label_news)}: #{news.title}"
     body :news => news,
          :news_url => url_for(:controller => 'news', :action => 'show', :id => news)
     render_multipart('news_added', body)
   end
 
-  # Builds a tmail object used to email the specified recipients of the specified message that was posted. 
+  # Builds a tmail object used to email the recipients of the specified message that was posted. 
   #
   # Example:
-  #   message_posted(message, recipients) => tmail object
-  #   Mailer.deliver_message_posted(message, recipients) => sends an email to the recipients
-  def message_posted(message, recipients)
+  #   message_posted(message) => tmail object
+  #   Mailer.deliver_message_posted(message) => sends an email to the recipients
+  def message_posted(message)
     redmine_headers 'Project' => message.project.identifier,
                     'Topic-Id' => (message.parent_id || message.id)
     message_id message
     references message.parent unless message.parent.nil?
-    recipients(recipients)
+    recipients(message.recipients)
+    cc((message.root.watcher_recipients + message.board.watcher_recipients).uniq - @recipients)
     subject "[#{message.board.project.name} - #{message.board.name} - msg#{message.root.id}] #{message.subject}"
     body :message => message,
-         :message_url => url_for(:controller => 'messages', :action => 'show', :board_id => message.board_id, :id => message.root)
+         :message_url => url_for(message.event_url)
     render_multipart('message_posted', body)
   end
   
@@ -171,11 +176,11 @@ class Mailer < ActionMailer::Base
     redmine_headers 'Project' => wiki_content.project.identifier,
                     'Wiki-Page-Id' => wiki_content.page.id
     message_id wiki_content
-    recipients wiki_content.project.recipients
+    recipients wiki_content.recipients
     cc(wiki_content.page.wiki.watcher_recipients - recipients)
-    subject "[#{wiki_content.project.name}] #{l(:mail_subject_wiki_content_added, :page => wiki_content.page.pretty_title)}"
+    subject "[#{wiki_content.project.name}] #{l(:mail_subject_wiki_content_added, :id => wiki_content.page.pretty_title)}"
     body :wiki_content => wiki_content,
-         :wiki_content_url => url_for(:controller => 'wiki', :action => 'index', :id => wiki_content.project, :page => wiki_content.page.title)
+         :wiki_content_url => url_for(:controller => 'wiki', :action => 'show', :project_id => wiki_content.project, :id => wiki_content.page.title)
     render_multipart('wiki_content_added', body)
   end
   
@@ -188,12 +193,12 @@ class Mailer < ActionMailer::Base
     redmine_headers 'Project' => wiki_content.project.identifier,
                     'Wiki-Page-Id' => wiki_content.page.id
     message_id wiki_content
-    recipients wiki_content.project.recipients
+    recipients wiki_content.recipients
     cc(wiki_content.page.wiki.watcher_recipients + wiki_content.page.watcher_recipients - recipients)
-    subject "[#{wiki_content.project.name}] #{l(:mail_subject_wiki_content_updated, :page => wiki_content.page.pretty_title)}"
+    subject "[#{wiki_content.project.name}] #{l(:mail_subject_wiki_content_updated, :id => wiki_content.page.pretty_title)}"
     body :wiki_content => wiki_content,
-         :wiki_content_url => url_for(:controller => 'wiki', :action => 'index', :id => wiki_content.project, :page => wiki_content.page.title),
-         :wiki_diff_url => url_for(:controller => 'wiki', :action => 'diff', :id => wiki_content.project, :page => wiki_content.page.title, :version => wiki_content.version)
+         :wiki_content_url => url_for(:controller => 'wiki', :action => 'show', :project_id => wiki_content.project, :id => wiki_content.page.title),
+         :wiki_diff_url => url_for(:controller => 'wiki', :action => 'diff', :project_id => wiki_content.project, :id => wiki_content.page.title, :version => wiki_content.version)
     render_multipart('wiki_content_updated', body)
   end
 
@@ -269,6 +274,7 @@ class Mailer < ActionMailer::Base
   # Overrides default deliver! method to prevent from sending an email
   # with no recipient, cc or bcc
   def deliver!(mail = @mail)
+    set_language_if_valid @initial_language
     return false if (recipients.nil? || recipients.empty?) &&
                     (cc.nil? || cc.empty?) &&
                     (bcc.nil? || bcc.empty?)
@@ -280,7 +286,21 @@ class Mailer < ActionMailer::Base
     if @references_objects
       mail.references = @references_objects.collect {|o| self.class.message_id_for(o)}
     end
-    super(mail)
+    
+    # Log errors when raise_delivery_errors is set to false, Rails does not
+    raise_errors = self.class.raise_delivery_errors
+    self.class.raise_delivery_errors = true
+    begin
+      return super(mail)
+    rescue Exception => e
+      if raise_errors
+        raise e
+      elsif mylogger
+        mylogger.error "The following error occured while sending email notification: \"#{e.message}\". Check your configuration in config/email.yml."
+      end
+    ensure
+      self.class.raise_delivery_errors = raise_errors
+    end
   end
 
   # Sends reminders to issue assignees
@@ -288,13 +308,16 @@ class Mailer < ActionMailer::Base
   # * :days     => how many days in the future to remind about (defaults to 7)
   # * :tracker  => id of tracker for filtering issues (defaults to all trackers)
   # * :project  => id or identifier of project to process (defaults to all projects)
+  # * :users    => array of user ids who should be reminded
   def self.reminders(options={})
     days = options[:days] || 7
     project = options[:project] ? Project.find(options[:project]) : nil
     tracker = options[:tracker] ? Tracker.find(options[:tracker]) : nil
+    user_ids = options[:users]
 
     s = ARCondition.new ["#{IssueStatus.table_name}.is_closed = ? AND #{Issue.table_name}.due_date <= ?", false, days.day.from_now.to_date]
     s << "#{Issue.table_name}.assigned_to_id IS NOT NULL"
+    s << ["#{Issue.table_name}.assigned_to_id IN (?)", user_ids] if user_ids.present?
     s << "#{Project.table_name}.status = #{Project::STATUS_ACTIVE}"
     s << "#{Issue.table_name}.project_id = #{project.id}" if project
     s << "#{Issue.table_name}.tracker_id = #{tracker.id}" if tracker
@@ -306,10 +329,20 @@ class Mailer < ActionMailer::Base
       deliver_reminder(assignee, issues, days) unless assignee.nil?
     end
   end
+  
+  # Activates/desactivates email deliveries during +block+
+  def self.with_deliveries(enabled = true, &block)
+    was_enabled = ActionMailer::Base.perform_deliveries
+    ActionMailer::Base.perform_deliveries = !!enabled
+    yield
+  ensure
+    ActionMailer::Base.perform_deliveries = was_enabled
+  end
 
   private
   def initialize_defaults(method_name)
     super
+    @initial_language = current_language
     set_language_if_valid Setting.default_language
     from Setting.mail_from
     
@@ -335,9 +368,14 @@ class Mailer < ActionMailer::Base
       recipients.delete(@author.mail) if recipients
       cc.delete(@author.mail) if cc
     end
+    
+    notified_users = [recipients, cc].flatten.compact.uniq
+    # Rails would log recipients only, not cc and bcc
+    mylogger.info "Sending email notification to: #{notified_users.join(', ')}" if mylogger
+    
     # Blind carbon copy recipients
     if Setting.bcc_recipients?
-      bcc([recipients, cc].flatten.compact.uniq)
+      bcc(notified_users)
       recipients []
       cc []
     end
@@ -387,6 +425,10 @@ class Mailer < ActionMailer::Base
   def references(object)
     @references_objects ||= []
     @references_objects << object
+  end
+    
+  def mylogger
+    RAILS_DEFAULT_LOGGER
   end
 end
 

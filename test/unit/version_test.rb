@@ -104,6 +104,119 @@ class VersionTest < ActiveSupport::TestCase
     assert_progress_equal (25.0*0.2 + 25.0*1 + 10.0*0.3 + 40.0*0.1)/100.0*100, v.completed_pourcent
     assert_progress_equal 25.0/100.0*100, v.closed_pourcent
   end
+
+  context "#behind_schedule?" do
+    setup do
+      ProjectCustomField.destroy_all # Custom values are a mess to isolate in tests
+      @project = Project.generate!(:identifier => 'test0')
+      @project.trackers << Tracker.generate!
+
+      @version = Version.generate!(:project => @project, :effective_date => nil)
+    end
+    
+    should "be false if there are no issues assigned" do
+      @version.update_attribute(:effective_date, Date.yesterday)
+      assert_equal false, @version.behind_schedule?
+    end
+
+    should "be false if there is no effective_date" do
+      assert_equal false, @version.behind_schedule?
+    end
+
+    should "be false if all of the issues are ahead of schedule" do
+      @version.update_attribute(:effective_date, 7.days.from_now.to_date)
+      @version.fixed_issues = [
+                               Issue.generate_for_project!(@project, :start_date => 7.days.ago, :done_ratio => 60), # 14 day span, 60% done, 50% time left
+                               Issue.generate_for_project!(@project, :start_date => 7.days.ago, :done_ratio => 60) # 14 day span, 60% done, 50% time left
+                              ]
+      assert_equal 60, @version.completed_pourcent
+      assert_equal false, @version.behind_schedule?
+    end
+
+    should "be true if any of the issues are behind schedule" do
+      @version.update_attribute(:effective_date, 7.days.from_now.to_date)
+      @version.fixed_issues = [
+                               Issue.generate_for_project!(@project, :start_date => 7.days.ago, :done_ratio => 60), # 14 day span, 60% done, 50% time left
+                               Issue.generate_for_project!(@project, :start_date => 7.days.ago, :done_ratio => 20) # 14 day span, 20% done, 50% time left
+                              ]
+      assert_equal 40, @version.completed_pourcent
+      assert_equal true, @version.behind_schedule?
+    end
+
+    should "be false if all of the issues are complete" do
+      @version.update_attribute(:effective_date, 7.days.from_now.to_date)
+      @version.fixed_issues = [
+                               Issue.generate_for_project!(@project, :start_date => 14.days.ago, :done_ratio => 100, :status => IssueStatus.find(5)), # 7 day span
+                               Issue.generate_for_project!(@project, :start_date => 14.days.ago, :done_ratio => 100, :status => IssueStatus.find(5)) # 7 day span
+                              ]
+      assert_equal 100, @version.completed_pourcent
+      assert_equal false, @version.behind_schedule?
+
+    end
+  end
+
+  context "#estimated_hours" do
+    setup do
+      @version = Version.create!(:project_id => 1, :name => '#estimated_hours')
+    end
+    
+    should "return 0 with no assigned issues" do
+      assert_equal 0, @version.estimated_hours
+    end
+    
+    should "return 0 with no estimated hours" do
+      add_issue(@version)
+      assert_equal 0, @version.estimated_hours
+    end
+    
+    should "return the sum of estimated hours" do
+      add_issue(@version, :estimated_hours => 2.5)
+      add_issue(@version, :estimated_hours => 5)
+      assert_equal 7.5, @version.estimated_hours
+    end
+    
+    should "return the sum of leaves estimated hours" do
+      parent = add_issue(@version)
+      add_issue(@version, :estimated_hours => 2.5, :parent_issue_id => parent.id)
+      add_issue(@version, :estimated_hours => 5, :parent_issue_id => parent.id)
+      assert_equal 7.5, @version.estimated_hours
+    end
+  end
+
+  test "should update all issue's fixed_version associations in case the hierarchy changed XXX" do
+    User.current = User.find(1) # Need the admin's permissions
+    
+    @version = Version.find(7)
+    # Separate hierarchy
+    project_1_issue = Issue.find(1)
+    project_1_issue.fixed_version = @version
+    assert project_1_issue.save, project_1_issue.errors.full_messages
+    
+    project_5_issue = Issue.find(6)
+    project_5_issue.fixed_version = @version
+    assert project_5_issue.save
+    
+    # Project
+    project_2_issue = Issue.find(4)
+    project_2_issue.fixed_version = @version
+    assert project_2_issue.save
+
+    # Update the sharing
+    @version.sharing = 'none'
+    assert @version.save
+
+    # Project 1 now out of the shared scope
+    project_1_issue.reload
+    assert_equal nil, project_1_issue.fixed_version, "Fixed version is still set after changing the Version's sharing"
+    
+    # Project 5 now out of the shared scope
+    project_5_issue.reload
+    assert_equal nil, project_5_issue.fixed_version, "Fixed version is still set after changing the Version's sharing"
+
+    # Project 2 issue remains
+    project_2_issue.reload
+    assert_equal @version, project_2_issue.fixed_version
+  end
   
   private
   

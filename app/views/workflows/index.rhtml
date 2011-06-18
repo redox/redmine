@@ -1,8 +1,11 @@
+<%= render :partial => 'action_menu' %>
+
 <h2><%=l(:label_workflow)%></h2>
 
 <% if @workflow_counts.empty? %>
 <p class="nodata"><%= l(:label_no_data) %></p>
 <% else %>
+<div class="autoscroll">
 <table class="list">
 <thead>
     <tr>
@@ -28,4 +31,5 @@
 <% end -%>
 </tbody>
 </table>
+</div>
 <% end %>

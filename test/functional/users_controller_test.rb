@@ -24,7 +24,7 @@ class UsersController; def rescue_action(e) raise e end; end
 class UsersControllerTest < ActionController::TestCase
   include Redmine::I18n
   
-  fixtures :users, :projects, :members, :member_roles, :roles
+  fixtures :users, :projects, :members, :member_roles, :roles, :auth_sources, :custom_fields, :custom_values
   
   def setup
     @controller = UsersController.new
@@ -32,21 +32,6 @@ class UsersControllerTest < ActionController::TestCase
     @response   = ActionController::TestResponse.new
     User.current = nil
     @request.session[:user_id] = 1 # admin
-  end
-  
-  def test_index_routing
-    assert_generates(
-      '/users',
-      :controller => 'users', :action => 'index'
-    )
-    assert_routing(
-      {:method => :get, :path => '/users'},
-      :controller => 'users', :action => 'index'
-    )
-    assert_recognizes(
-      {:controller => 'users', :action => 'index'},
-      {:method => :get, :path => '/users'}
-    )
   end
   
   def test_index
@@ -74,23 +59,25 @@ class UsersControllerTest < ActionController::TestCase
     assert_equal 'John', users.first.firstname
   end
   
-  def test_show_routing
-    assert_routing(
-      {:method => :get, :path => '/users/44'},
-      :controller => 'users', :action => 'show', :id => '44'
-    )
-    assert_recognizes(
-      {:controller => 'users', :action => 'show', :id => '44'},
-      {:method => :get, :path => '/users/44'}
-    )
-  end
-  
   def test_show
     @request.session[:user_id] = nil
     get :show, :id => 2
     assert_response :success
     assert_template 'show'
     assert_not_nil assigns(:user)
+    
+    assert_tag 'li', :content => /Phone number/
+  end
+  
+  def test_show_should_not_display_hidden_custom_fields
+    @request.session[:user_id] = nil
+    UserCustomField.find_by_name('Phone number').update_attribute :visible, false
+    get :show, :id => 2
+    assert_response :success
+    assert_template 'show'
+    assert_not_nil assigns(:user)
+    
+    assert_no_tag 'li', :content => /Phone number/
   end
 
   def test_show_should_not_fail_when_custom_values_are_nil
@@ -103,12 +90,11 @@ class UsersControllerTest < ActionController::TestCase
     get :show, :id => 2
     assert_response :success
   end
-  
 
   def test_show_inactive
+    @request.session[:user_id] = nil
     get :show, :id => 5
     assert_response 404
-    assert_nil assigns(:user)
   end
   
   def test_show_should_not_reveal_users_with_no_visible_activity_or_project
@@ -116,47 +102,83 @@ class UsersControllerTest < ActionController::TestCase
     get :show, :id => 9
     assert_response 404
   end
+  
+  def test_show_inactive_by_admin
+    @request.session[:user_id] = 1
+    get :show, :id => 5
+    assert_response 200
+    assert_not_nil assigns(:user)
+  end
+  
+  def test_show_displays_memberships_based_on_project_visibility
+    @request.session[:user_id] = 1
+    get :show, :id => 2
+    assert_response :success
+    memberships = assigns(:memberships)
+    assert_not_nil memberships
+    project_ids = memberships.map(&:project_id)
+    assert project_ids.include?(2) #private project admin can see
+  end
 
-  def test_add_routing
-    assert_routing(
-      {:method => :get, :path => '/users/new'},
-      :controller => 'users', :action => 'add'
-    )
-    assert_recognizes(
-    #TODO: remove this and replace with POST to collection, need to modify form
-      {:controller => 'users', :action => 'add'},
-      {:method => :post, :path => '/users/new'}
-    )
-    assert_recognizes(
-      {:controller => 'users', :action => 'add'},
-      {:method => :post, :path => '/users'}
-    )
+  context "GET :new" do
+    setup do
+      get :new
+    end
+
+    should_assign_to :user
+    should_respond_with :success
+    should_render_template :new
   end
-  
-  def test_edit_routing
-    assert_routing(
-      {:method => :get, :path => '/users/444/edit'},
-      :controller => 'users', :action => 'edit', :id => '444'
-    )
-    assert_routing(
-      {:method => :get, :path => '/users/222/edit/membership'},
-      :controller => 'users', :action => 'edit', :id => '222', :tab => 'membership'
-    )
-    assert_recognizes(
-    #TODO: use PUT on user_path, modify form
-      {:controller => 'users', :action => 'edit', :id => '444'},
-      {:method => :post, :path => '/users/444/edit'}
-    )
+
+  context "POST :create" do
+    context "when successful" do
+      setup do
+        post :create, :user => {
+          :firstname => 'John',
+          :lastname => 'Doe',
+          :login => 'jdoe',
+          :password => 'test',
+          :password_confirmation => 'test',
+          :mail => 'jdoe@gmail.com'
+        },
+        :notification_option => 'none'
+      end
+
+      should_assign_to :user
+      should_respond_with :redirect
+      should_redirect_to('user edit') { {:controller => 'users', :action => 'edit', :id => User.find_by_login('jdoe')}}
+
+      should 'set the users mail notification' do
+        user = User.last
+        assert_equal 'none', user.mail_notification
+      end
+    end
+
+    context "when unsuccessful" do
+      setup do
+        post :create, :user => {}
+      end
+
+      should_assign_to :user
+      should_respond_with :success
+      should_render_template :new
+    end
+
   end
-  
-  def test_edit
+
+  def test_update
     ActionMailer::Base.deliveries.clear
-    post :edit, :id => 2, :user => {:firstname => 'Changed'}
-    assert_equal 'Changed', User.find(2).firstname
+    put :update, :id => 2, :user => {:firstname => 'Changed'}, :notification_option => 'all', :pref => {:hide_mail => '1', :comments_sorting => 'desc'}
+
+    user = User.find(2)
+    assert_equal 'Changed', user.firstname
+    assert_equal 'all', user.mail_notification
+    assert_equal true, user.pref[:hide_mail]
+    assert_equal 'desc', user.pref[:comments_sorting]
     assert ActionMailer::Base.deliveries.empty?
   end
   
-  def test_edit_with_activation_should_send_a_notification
+  def test_update_with_activation_should_send_a_notification
     u = User.new(:firstname => 'Foo', :lastname => 'Bar', :mail => 'foo.bar@somenet.foo', :language => 'fr')
     u.login = 'foo'
     u.status = User::STATUS_REGISTERED
@@ -164,7 +186,7 @@ class UsersControllerTest < ActionController::TestCase
     ActionMailer::Base.deliveries.clear
     Setting.bcc_recipients = '1'
     
-    post :edit, :id => u.id, :user => {:status => User::STATUS_ACTIVE}
+    put :update, :id => u.id, :user => {:status => User::STATUS_ACTIVE}
     assert u.reload.active?
     mail = ActionMailer::Base.deliveries.last
     assert_not_nil mail
@@ -172,12 +194,12 @@ class UsersControllerTest < ActionController::TestCase
     assert mail.body.include?(ll('fr', :notice_account_activated))
   end
   
-  def test_edit_with_password_change_should_send_a_notification
+  def test_updat_with_password_change_should_send_a_notification
     ActionMailer::Base.deliveries.clear
     Setting.bcc_recipients = '1'
     
     u = User.find(2)
-    post :edit, :id => u.id, :user => {}, :password => 'newpass', :password_confirmation => 'newpass', :send_information => '1'
+    put :update, :id => u.id, :user => {}, :password => 'newpass', :password_confirmation => 'newpass', :send_information => '1'
     assert_equal User.hash_password('newpass'), u.reload.hashed_password 
     
     mail = ActionMailer::Base.deliveries.last
@@ -185,19 +207,17 @@ class UsersControllerTest < ActionController::TestCase
     assert_equal [u.mail], mail.bcc
     assert mail.body.include?('newpass')
   end
-  
-  def test_add_membership_routing
-    assert_routing(
-      {:method => :post, :path => '/users/123/memberships'},
-      :controller => 'users', :action => 'edit_membership', :id => '123'
-    )
-  end
-  
-  def test_edit_membership_routing
-    assert_routing(
-      {:method => :post, :path => '/users/123/memberships/55'},
-      :controller => 'users', :action => 'edit_membership', :id => '123', :membership_id => '55'
-    )
+
+  test "put :update with a password change to an AuthSource user switching to Internal authentication" do
+    # Configure as auth source
+    u = User.find(2)
+    u.auth_source = AuthSource.find(1)
+    u.save!
+
+    put :update, :id => u.id, :user => {:auth_source_id => ''}, :password => 'newpass', :password_confirmation => 'newpass'
+
+    assert_equal nil, u.reload.auth_source
+    assert_equal User.hash_password('newpass'), u.reload.hashed_password
   end
   
   def test_edit_membership
@@ -205,14 +225,6 @@ class UsersControllerTest < ActionController::TestCase
                            :membership => { :role_ids => [2]}
     assert_redirected_to :action => 'edit', :id => '2', :tab => 'memberships'
     assert_equal [2], Member.find(1).role_ids
-  end
-  
-  def test_destroy_membership
-    assert_routing(
-    #TODO: use DELETE method on user_membership_path, modify form
-      {:method => :post, :path => '/users/567/memberships/12/destroy'},
-      :controller => 'users', :action => 'destroy_membership', :id => '567', :membership_id => '12'
-    )
   end
   
   def test_destroy_membership

@@ -25,9 +25,24 @@ class WikiContent < ActiveRecord::Base
   validates_length_of :comments, :maximum => 255, :allow_nil => true
   
   acts_as_versioned
+  
+  def visible?(user=User.current)
+    page.visible?(user)
+  end
     
   def project
     page.project
+  end
+  
+  def attachments
+    page.nil? ? [] : page.attachments
+  end
+  
+  # Returns the mail adresses of users that should be notified
+  def recipients
+    notified = project.notified_users
+    notified.reject! {|user| !visible?(user)}
+    notified.collect(&:mail)
   end
   
   class Version
@@ -39,7 +54,7 @@ class WikiContent < ActiveRecord::Base
                   :description => :comments,
                   :datetime => :updated_on,
                   :type => 'wiki-page',
-                  :url => Proc.new {|o| {:controller => 'wiki', :id => o.page.wiki.project_id, :page => o.page.title, :version => o.version}}
+                  :url => Proc.new {|o| {:controller => 'wiki', :action => 'show', :project_id => o.page.wiki.project, :id => o.page.title, :version => o.version}}
 
     acts_as_activity_provider :type => 'wiki_edits',
                               :timestamp => "#{WikiContent.versioned_table_name}.updated_on",

@@ -26,10 +26,44 @@ class QueryTest < ActiveSupport::TestCase
     assert !query.available_filters.has_key?('cf_3')
   end
   
+  def test_system_shared_versions_should_be_available_in_global_queries
+    Version.find(2).update_attribute :sharing, 'system'
+    query = Query.new(:project => nil, :name => '_')
+    assert query.available_filters.has_key?('fixed_version_id')
+    assert query.available_filters['fixed_version_id'][:values].detect {|v| v.last == '2'}
+  end
+  
+  def test_project_filter_in_global_queries
+    query = Query.new(:project => nil, :name => '_')
+    project_filter = query.available_filters["project_id"]
+    assert_not_nil project_filter
+    project_ids = project_filter[:values].map{|p| p[1]}
+    assert project_ids.include?("1")  #public project
+    assert !project_ids.include?("2") #private project user cannot see
+  end
+  
   def find_issues_with_query(query)
     Issue.find :all,
       :include => [ :assigned_to, :status, :tracker, :project, :priority ], 
       :conditions => query.statement
+  end
+
+  def assert_find_issues_with_query_is_successful(query)
+    assert_nothing_raised do
+      find_issues_with_query(query)
+    end
+  end
+
+  def assert_query_statement_includes(query, condition)
+    assert query.statement.include?(condition), "Query statement condition not found in: #{query.statement}"
+  end
+
+  def test_query_should_allow_shared_versions_for_a_project_query
+    subproject_version = Version.find(4)
+    query = Query.new(:project => Project.find(1), :name => '_')
+    query.add_filter('fixed_version_id', '=', [subproject_version.id.to_s])
+
+    assert query.statement.include?("#{Issue.table_name}.fixed_version_id IN ('4')")
   end
   
   def test_query_with_multiple_custom_fields
@@ -197,6 +231,11 @@ class QueryTest < ActiveSupport::TestCase
     assert q.has_column?(c)
   end
   
+  def test_groupable_columns_should_include_custom_fields
+    q = Query.new
+    assert q.groupable_columns.detect {|c| c.is_a? QueryCustomFieldColumn}
+  end
+  
   def test_default_sort
     q = Query.new
     assert_equal [], q.sort_criteria
@@ -264,6 +303,39 @@ class QueryTest < ActiveSupport::TestCase
     assert_equal values.sort, values
   end
   
+  def test_invalid_query_should_raise_query_statement_invalid_error
+    q = Query.new
+    assert_raise Query::StatementInvalid do
+      q.issues(:conditions => "foo = 1")
+    end
+  end
+  
+  def test_issue_count_by_association_group
+    q = Query.new(:name => '_', :group_by => 'assigned_to')
+    count_by_group = q.issue_count_by_group
+    assert_kind_of Hash, count_by_group
+    assert_equal %w(NilClass User), count_by_group.keys.collect {|k| k.class.name}.uniq.sort
+    assert_equal %w(Fixnum), count_by_group.values.collect {|k| k.class.name}.uniq
+    assert count_by_group.has_key?(User.find(3))
+  end
+
+  def test_issue_count_by_list_custom_field_group
+    q = Query.new(:name => '_', :group_by => 'cf_1')
+    count_by_group = q.issue_count_by_group
+    assert_kind_of Hash, count_by_group
+    assert_equal %w(NilClass String), count_by_group.keys.collect {|k| k.class.name}.uniq.sort
+    assert_equal %w(Fixnum), count_by_group.values.collect {|k| k.class.name}.uniq
+    assert count_by_group.has_key?('MySQL')
+  end
+  
+  def test_issue_count_by_date_custom_field_group
+    q = Query.new(:name => '_', :group_by => 'cf_8')
+    count_by_group = q.issue_count_by_group
+    assert_kind_of Hash, count_by_group
+    assert_equal %w(Date NilClass), count_by_group.keys.collect {|k| k.class.name}.uniq.sort
+    assert_equal %w(Fixnum), count_by_group.values.collect {|k| k.class.name}.uniq
+  end
+  
   def test_label_for
     q = Query.new
     assert_equal 'assigned_to', q.label_for('assigned_to_id')
@@ -298,4 +370,155 @@ class QueryTest < ActiveSupport::TestCase
     assert !q.editable_by?(manager)
     assert !q.editable_by?(developer)
   end
+
+  context "#available_filters" do
+    setup do
+      @query = Query.new(:name => "_")
+    end
+    
+    should "include users of visible projects in cross-project view" do
+      users = @query.available_filters["assigned_to_id"]
+      assert_not_nil users
+      assert users[:values].map{|u|u[1]}.include?("3")
+    end
+
+    context "'member_of_group' filter" do
+      should "be present" do
+        assert @query.available_filters.keys.include?("member_of_group")
+      end
+      
+      should "be an optional list" do
+        assert_equal :list_optional, @query.available_filters["member_of_group"][:type]
+      end
+      
+      should "have a list of the groups as values" do
+        Group.destroy_all # No fixtures
+        group1 = Group.generate!.reload
+        group2 = Group.generate!.reload
+
+        expected_group_list = [
+                               [group1.name, group1.id.to_s],
+                               [group2.name, group2.id.to_s]
+                              ]
+        assert_equal expected_group_list.sort, @query.available_filters["member_of_group"][:values].sort
+      end
+
+    end
+
+    context "'assigned_to_role' filter" do
+      should "be present" do
+        assert @query.available_filters.keys.include?("assigned_to_role")
+      end
+      
+      should "be an optional list" do
+        assert_equal :list_optional, @query.available_filters["assigned_to_role"][:type]
+      end
+      
+      should "have a list of the Roles as values" do
+        assert @query.available_filters["assigned_to_role"][:values].include?(['Manager','1'])
+        assert @query.available_filters["assigned_to_role"][:values].include?(['Developer','2'])
+        assert @query.available_filters["assigned_to_role"][:values].include?(['Reporter','3'])
+      end
+
+      should "not include the built in Roles as values" do
+        assert ! @query.available_filters["assigned_to_role"][:values].include?(['Non member','4'])
+        assert ! @query.available_filters["assigned_to_role"][:values].include?(['Anonymous','5'])
+      end
+
+    end
+
+  end
+
+  context "#statement" do
+    context "with 'member_of_group' filter" do
+      setup do
+        Group.destroy_all # No fixtures
+        @user_in_group = User.generate!
+        @second_user_in_group = User.generate!
+        @user_in_group2 = User.generate!
+        @user_not_in_group = User.generate!
+        
+        @group = Group.generate!.reload
+        @group.users << @user_in_group
+        @group.users << @second_user_in_group
+        
+        @group2 = Group.generate!.reload
+        @group2.users << @user_in_group2
+        
+      end
+      
+      should "search assigned to for users in the group" do
+        @query = Query.new(:name => '_')
+        @query.add_filter('member_of_group', '=', [@group.id.to_s])
+
+        assert_query_statement_includes @query, "#{Issue.table_name}.assigned_to_id IN ('#{@user_in_group.id}','#{@second_user_in_group.id}')"
+        assert_find_issues_with_query_is_successful @query
+      end
+
+      should "search not assigned to any group member (none)" do
+        @query = Query.new(:name => '_')
+        @query.add_filter('member_of_group', '!*', [''])
+
+        # Users not in a group
+        assert_query_statement_includes @query, "#{Issue.table_name}.assigned_to_id IS NULL OR #{Issue.table_name}.assigned_to_id NOT IN ('#{@user_in_group.id}','#{@second_user_in_group.id}','#{@user_in_group2.id}')"
+        assert_find_issues_with_query_is_successful @query
+
+      end
+
+      should "search assigned to any group member (all)" do
+        @query = Query.new(:name => '_')
+        @query.add_filter('member_of_group', '*', [''])
+
+        # Only users in a group
+        assert_query_statement_includes @query, "#{Issue.table_name}.assigned_to_id IN ('#{@user_in_group.id}','#{@second_user_in_group.id}','#{@user_in_group2.id}')"
+        assert_find_issues_with_query_is_successful @query
+
+      end
+    end
+
+    context "with 'assigned_to_role' filter" do
+      setup do
+        # No fixtures
+        MemberRole.delete_all
+        Member.delete_all
+        Role.delete_all
+        
+        @manager_role = Role.generate!(:name => 'Manager')
+        @developer_role = Role.generate!(:name => 'Developer')
+
+        @project = Project.generate!
+        @manager = User.generate!
+        @developer = User.generate!
+        @boss = User.generate!
+        User.add_to_project(@manager, @project, @manager_role)
+        User.add_to_project(@developer, @project, @developer_role)
+        User.add_to_project(@boss, @project, [@manager_role, @developer_role])
+      end
+      
+      should "search assigned to for users with the Role" do
+        @query = Query.new(:name => '_')
+        @query.add_filter('assigned_to_role', '=', [@manager_role.id.to_s])
+
+        assert_query_statement_includes @query, "#{Issue.table_name}.assigned_to_id IN ('#{@manager.id}','#{@boss.id}')"
+        assert_find_issues_with_query_is_successful @query
+      end
+
+      should "search assigned to for users not assigned to any Role (none)" do
+        @query = Query.new(:name => '_')
+        @query.add_filter('assigned_to_role', '!*', [''])
+
+        assert_query_statement_includes @query, "#{Issue.table_name}.assigned_to_id IS NULL OR #{Issue.table_name}.assigned_to_id NOT IN ('#{@manager.id}','#{@developer.id}','#{@boss.id}')"
+        assert_find_issues_with_query_is_successful @query
+      end
+
+      should "search assigned to for users assigned to any Role (all)" do
+        @query = Query.new(:name => '_')
+        @query.add_filter('assigned_to_role', '*', [''])
+
+        assert_query_statement_includes @query, "#{Issue.table_name}.assigned_to_id IN ('#{@manager.id}','#{@developer.id}','#{@boss.id}')"
+        assert_find_issues_with_query_is_successful @query
+      end
+    end
+  end
+  
 end

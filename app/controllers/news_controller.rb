@@ -17,20 +17,24 @@
 
 class NewsController < ApplicationController
   default_search_scope :news
-  before_filter :find_news, :except => [:new, :index, :preview]
-  before_filter :find_project, :only => [:new, :preview]
-  before_filter :authorize, :except => [:index, :preview]
+  model_object News
+  before_filter :find_model_object, :except => [:new, :create, :index]
+  before_filter :find_project_from_association, :except => [:new, :create, :index]
+  before_filter :find_project, :only => [:new, :create]
+  before_filter :authorize, :except => [:index]
   before_filter :find_optional_project, :only => :index
   accept_key_auth :index
   
   def index
     @news_pages, @newss = paginate :news,
                                    :per_page => 10,
-                                   :conditions => (@project ? {:project_id => @project.id} : Project.visible_by(User.current)),
+                                   :conditions => Project.allowed_to_condition(User.current, :view_news, :project => @project),
                                    :include => [:author, :project],
                                    :order => "#{News.table_name}.created_on DESC"    
     respond_to do |format|
       format.html { render :layout => false if request.xhr? }
+      format.xml { render :xml => @newss.to_xml }
+      format.json { render :json => @newss.to_json }
       format.atom { render_feed(@newss, :title => (@project ? @project.name : Setting.app_title) + ": #{l(:label_news_plural)}") }
     end
   end
@@ -42,37 +46,31 @@ class NewsController < ApplicationController
 
   def new
     @news = News.new(:project => @project, :author => User.current)
+  end
+
+  def create
+    @news = News.new(:project => @project, :author => User.current)
     if request.post?
       @news.attributes = params[:news]
       if @news.save
         flash[:notice] = l(:notice_successful_create)
         redirect_to :controller => 'news', :action => 'index', :project_id => @project
+      else
+        render :action => 'new'
       end
     end
   end
-  
+
   def edit
-    if request.post? and @news.update_attributes(params[:news])
+  end
+  
+  def update
+    if request.put? and @news.update_attributes(params[:news])
       flash[:notice] = l(:notice_successful_update)
       redirect_to :action => 'show', :id => @news
-    end
-  end
-  
-  def add_comment
-    @comment = Comment.new(params[:comment])
-    @comment.author = User.current
-    if @news.comments << @comment
-      flash[:notice] = l(:label_comment_added)
-      redirect_to :action => 'show', :id => @news
     else
-      show
-      render :action => 'show'
+      render :action => 'edit'
     end
-  end
-
-  def destroy_comment
-    @news.comments.find(params[:comment_id]).destroy
-    redirect_to :action => 'show', :id => @news
   end
 
   def destroy
@@ -80,19 +78,7 @@ class NewsController < ApplicationController
     redirect_to :action => 'index', :project_id => @project
   end
   
-  def preview
-    @text = (params[:news] ? params[:news][:description] : nil)
-    render :partial => 'common/preview'
-  end
-  
 private
-  def find_news
-    @news = News.find(params[:id])
-    @project = @news.project
-  rescue ActiveRecord::RecordNotFound
-    render_404
-  end
-  
   def find_project
     @project = Project.find(params[:project_id])
   rescue ActiveRecord::RecordNotFound

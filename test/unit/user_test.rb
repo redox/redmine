@@ -18,7 +18,7 @@
 require File.dirname(__FILE__) + '/../test_helper'
 
 class UserTest < ActiveSupport::TestCase
-  fixtures :users, :members, :projects, :roles, :member_roles
+  fixtures :users, :members, :projects, :roles, :member_roles, :auth_sources
 
   def setup
     @admin = User.find(1)
@@ -34,6 +34,12 @@ class UserTest < ActiveSupport::TestCase
   
   def test_truth
     assert_kind_of User, @jsmith
+  end
+  
+  def test_mail_should_be_stripped
+    u = User.new
+    u.mail = " foo@bar.com  "
+    assert_equal "foo@bar.com", u.mail
   end
 
   def test_create
@@ -54,7 +60,34 @@ class UserTest < ActiveSupport::TestCase
     user.password, user.password_confirmation = "password", "password"
     assert user.save
   end
+
+  context "User#before_create" do
+    should "set the mail_notification to the default Setting" do
+      @user1 = User.generate_with_protected!
+      assert_equal 'only_my_events', @user1.mail_notification
+
+      with_settings :default_notification_option => 'all' do
+        @user2 = User.generate_with_protected!
+        assert_equal 'all', @user2.mail_notification
+      end
+    end
+  end
   
+  context "User.login" do
+    should "be case-insensitive." do
+      u = User.new(:firstname => "new", :lastname => "user", :mail => "newuser@somenet.foo")
+      u.login = 'newuser'
+      u.password, u.password_confirmation = "password", "password"
+      assert u.save
+      
+      u = User.new(:firstname => "Similar", :lastname => "User", :mail => "similaruser@somenet.foo")
+      u.login = 'NewUser'
+      u.password, u.password_confirmation = "password", "password"
+      assert !u.save
+      assert_equal I18n.translate('activerecord.errors.messages.taken'), u.errors.on(:login)
+    end
+  end
+
   def test_mail_uniqueness_should_not_be_case_sensitive
     u = User.new(:firstname => "new", :lastname => "user", :mail => "newuser@somenet.foo")
     u.login = 'newuser1'
@@ -88,6 +121,25 @@ class UserTest < ActiveSupport::TestCase
     assert_equal 1, @admin.errors.count
   end
   
+  context "User#try_to_login" do
+    should "fall-back to case-insensitive if user login is not found as-typed." do
+      user = User.try_to_login("AdMin", "admin")
+      assert_kind_of User, user
+      assert_equal "admin", user.login
+    end
+
+    should "select the exact matching user first" do
+      case_sensitive_user = User.generate_with_protected!(:login => 'changed', :password => 'admin', :password_confirmation => 'admin')
+      # bypass validations to make it appear like existing data
+      case_sensitive_user.update_attribute(:login, 'ADMIN')
+
+      user = User.try_to_login("ADMIN", "admin")
+      assert_kind_of User, user
+      assert_equal "ADMIN", user.login
+
+    end
+  end
+
   def test_password
     user = User.try_to_login("admin", "admin")
     assert_kind_of User, user
@@ -120,13 +172,63 @@ class UserTest < ActiveSupport::TestCase
     assert_equal nil, user  
   end
   
+  if ldap_configured?
+    context "#try_to_login using LDAP" do
+      context "with failed connection to the LDAP server" do
+        should "return nil" do
+          @auth_source = AuthSourceLdap.find(1)
+          AuthSource.any_instance.stubs(:initialize_ldap_con).raises(Net::LDAP::LdapError, 'Cannot connect')
+          
+          assert_equal nil, User.try_to_login('edavis', 'wrong')
+        end
+      end
+
+      context "with an unsuccessful authentication" do
+        should "return nil" do
+          assert_equal nil, User.try_to_login('edavis', 'wrong')
+        end
+      end
+      
+      context "on the fly registration" do
+        setup do
+          @auth_source = AuthSourceLdap.find(1)
+        end
+
+        context "with a successful authentication" do
+          should "create a new user account if it doesn't exist" do
+            assert_difference('User.count') do
+              user = User.try_to_login('edavis', '123456')
+              assert !user.admin?
+            end
+          end
+          
+          should "retrieve existing user" do
+            user = User.try_to_login('edavis', '123456')
+            user.admin = true
+            user.save!
+            
+            assert_no_difference('User.count') do
+              user = User.try_to_login('edavis', '123456')
+              assert user.admin?
+            end
+          end
+        end
+      end
+    end
+
+  else
+    puts "Skipping LDAP tests."
+  end
+  
   def test_create_anonymous
     AnonymousUser.delete_all
     anon = User.anonymous
     assert !anon.new_record?
     assert_kind_of AnonymousUser, anon
   end
-  
+
+  should_have_one :rss_token
+
   def test_rss_key
     assert_nil @jsmith.rss_token
     key = @jsmith.rss_key
@@ -135,7 +237,55 @@ class UserTest < ActiveSupport::TestCase
     @jsmith.reload
     assert_equal key, @jsmith.rss_key
   end
+
   
+  should_have_one :api_token
+
+  context "User#api_key" do
+    should "generate a new one if the user doesn't have one" do
+      user = User.generate_with_protected!(:api_token => nil)
+      assert_nil user.api_token
+
+      key = user.api_key
+      assert_equal 40, key.length
+      user.reload
+      assert_equal key, user.api_key
+    end
+
+    should "return the existing api token value" do
+      user = User.generate_with_protected!
+      token = Token.generate!(:action => 'api')
+      user.api_token = token
+      assert user.save
+      
+      assert_equal token.value, user.api_key
+    end
+  end
+
+  context "User#find_by_api_key" do
+    should "return nil if no matching key is found" do
+      assert_nil User.find_by_api_key('zzzzzzzzz')
+    end
+
+    should "return nil if the key is found for an inactive user" do
+      user = User.generate_with_protected!(:status => User::STATUS_LOCKED)
+      token = Token.generate!(:action => 'api')
+      user.api_token = token
+      user.save
+
+      assert_nil User.find_by_api_key(token.value)
+    end
+
+    should "return the user if the key is found for an active user" do
+      user = User.generate_with_protected!(:status => User::STATUS_ACTIVE)
+      token = Token.generate!(:action => 'api')
+      user.api_token = token
+      user.save
+      
+      assert_equal user, User.find_by_api_key(token.value)
+    end
+  end
+
   def test_roles_for_project
     # user with a role
     roles = @jsmith.roles_for_project(Project.find(1))
@@ -147,7 +297,7 @@ class UserTest < ActiveSupport::TestCase
   end
   
   def test_mail_notification_all
-    @jsmith.mail_notification = true
+    @jsmith.mail_notification = 'all'
     @jsmith.notified_project_ids = []
     @jsmith.save
     @jsmith.reload
@@ -155,15 +305,15 @@ class UserTest < ActiveSupport::TestCase
   end
   
   def test_mail_notification_selected
-    @jsmith.mail_notification = false
+    @jsmith.mail_notification = 'selected'
     @jsmith.notified_project_ids = [1]
     @jsmith.save
     @jsmith.reload
     assert Project.find(1).recipients.include?(@jsmith.mail)
   end
   
-  def test_mail_notification_none
-    @jsmith.mail_notification = false
+  def test_mail_notification_only_my_events
+    @jsmith.mail_notification = 'only_my_events'
     @jsmith.notified_project_ids = []
     @jsmith.save
     @jsmith.reload
@@ -189,6 +339,158 @@ class UserTest < ActiveSupport::TestCase
     u.random_password
     assert !u.password.blank?
     assert !u.password_confirmation.blank?
+  end
+
+  context "#change_password_allowed?" do
+    should "be allowed if no auth source is set" do
+      user = User.generate_with_protected!
+      assert user.change_password_allowed?
+    end
+
+    should "delegate to the auth source" do
+      user = User.generate_with_protected!
+      
+      allowed_auth_source = AuthSource.generate!
+      def allowed_auth_source.allow_password_changes?; true; end
+
+      denied_auth_source = AuthSource.generate!
+      def denied_auth_source.allow_password_changes?; false; end
+
+      assert user.change_password_allowed?
+
+      user.auth_source = allowed_auth_source
+      assert user.change_password_allowed?, "User not allowed to change password, though auth source does"
+
+      user.auth_source = denied_auth_source
+      assert !user.change_password_allowed?, "User allowed to change password, though auth source does not"
+    end
+
+  end
+  
+  context "#allowed_to?" do
+    context "with a unique project" do
+      should "return false if project is archived" do
+        project = Project.find(1)
+        Project.any_instance.stubs(:status).returns(Project::STATUS_ARCHIVED)
+        assert ! @admin.allowed_to?(:view_issues, Project.find(1))
+      end
+      
+      should "return false if related module is disabled" do
+        project = Project.find(1)
+        project.enabled_module_names = ["issue_tracking"]
+        assert @admin.allowed_to?(:add_issues, project)
+        assert ! @admin.allowed_to?(:view_wiki_pages, project)
+      end
+      
+      should "authorize nearly everything for admin users" do
+        project = Project.find(1)
+        assert ! @admin.member_of?(project)
+        %w(edit_issues delete_issues manage_news manage_documents manage_wiki).each do |p|
+          assert @admin.allowed_to?(p.to_sym, project)
+        end
+      end
+      
+      should "authorize normal users depending on their roles" do
+        project = Project.find(1)
+        assert @jsmith.allowed_to?(:delete_messages, project)    #Manager
+        assert ! @dlopper.allowed_to?(:delete_messages, project) #Developper
+      end
+    end
+
+    context "with multiple projects" do
+      should "return false if array is empty" do
+        assert ! @admin.allowed_to?(:view_project, [])
+      end
+      
+      should "return true only if user has permission on all these projects" do
+        assert @admin.allowed_to?(:view_project, Project.all)
+        assert ! @dlopper.allowed_to?(:view_project, Project.all) #cannot see Project(2)
+        assert @jsmith.allowed_to?(:edit_issues, @jsmith.projects) #Manager or Developer everywhere
+        assert ! @jsmith.allowed_to?(:delete_issue_watchers, @jsmith.projects) #Dev cannot delete_issue_watchers
+      end
+      
+      should "behave correctly with arrays of 1 project" do
+        assert ! User.anonymous.allowed_to?(:delete_issues, [Project.first])
+      end
+    end
+    
+    context "with options[:global]" do
+      should "authorize if user has at least one role that has this permission" do
+        @dlopper2 = User.find(5) #only Developper on a project, not Manager anywhere
+        @anonymous = User.find(6)
+        assert @jsmith.allowed_to?(:delete_issue_watchers, nil, :global => true)
+        assert ! @dlopper2.allowed_to?(:delete_issue_watchers, nil, :global => true)
+        assert @dlopper2.allowed_to?(:add_issues, nil, :global => true)
+        assert ! @anonymous.allowed_to?(:add_issues, nil, :global => true)
+        assert @anonymous.allowed_to?(:view_issues, nil, :global => true)
+      end
+    end
+  end
+  
+  context "User#notify_about?" do
+    context "Issues" do
+      setup do
+        @project = Project.find(1)
+        @author = User.generate_with_protected!
+        @assignee = User.generate_with_protected!
+        @issue = Issue.generate_for_project!(@project, :assigned_to => @assignee, :author => @author)
+      end
+
+      should "be true for a user with :all" do
+        @author.update_attribute(:mail_notification, :all)
+        assert @author.notify_about?(@issue)
+      end
+      
+      should "be false for a user with :none" do
+        @author.update_attribute(:mail_notification, :none)
+        assert ! @author.notify_about?(@issue)
+      end
+      
+      should "be false for a user with :only_my_events and isn't an author, creator, or assignee" do
+        @user = User.generate_with_protected!(:mail_notification => :only_my_events)
+        assert ! @user.notify_about?(@issue)
+      end
+      
+      should "be true for a user with :only_my_events and is the author" do
+        @author.update_attribute(:mail_notification, :only_my_events)
+        assert @author.notify_about?(@issue)
+      end
+      
+      should "be true for a user with :only_my_events and is the assignee" do
+        @assignee.update_attribute(:mail_notification, :only_my_events)
+        assert @assignee.notify_about?(@issue)
+      end
+      
+      should "be true for a user with :only_assigned and is the assignee" do
+        @assignee.update_attribute(:mail_notification, :only_assigned)
+        assert @assignee.notify_about?(@issue)
+      end
+      
+      should "be false for a user with :only_assigned and is not the assignee" do
+        @author.update_attribute(:mail_notification, :only_assigned)
+        assert ! @author.notify_about?(@issue)
+      end
+      
+      should "be true for a user with :only_owner and is the author" do
+        @author.update_attribute(:mail_notification, :only_owner)
+        assert @author.notify_about?(@issue)
+      end
+      
+      should "be false for a user with :only_owner and is not the author" do
+        @assignee.update_attribute(:mail_notification, :only_owner)
+        assert ! @assignee.notify_about?(@issue)
+      end
+      
+      should "be false if the mail_notification is anything else" do
+        @assignee.update_attribute(:mail_notification, :somthing_else)
+        assert ! @assignee.notify_about?(@issue)
+      end
+      
+    end
+
+    context "other events" do
+      should 'be added and tested'
+    end
   end
   
   if Object.const_defined?(:OpenID)

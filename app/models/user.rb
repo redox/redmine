@@ -33,12 +33,22 @@ class User < Principal
     :username => '#{login}'
   }
 
+  MAIL_NOTIFICATION_OPTIONS = [
+                               [:all, :label_user_mail_option_all],
+                               [:selected, :label_user_mail_option_selected],
+                               [:none, :label_user_mail_option_none],
+                               [:only_my_events, :label_user_mail_option_only_my_events],
+                               [:only_assigned, :label_user_mail_option_only_assigned],
+                               [:only_owner, :label_user_mail_option_only_owner]
+                              ]
+
   has_and_belongs_to_many :groups, :after_add => Proc.new {|user, group| group.user_added(user)},
                                    :after_remove => Proc.new {|user, group| group.user_removed(user)}
   has_many :issue_categories, :foreign_key => 'assigned_to_id', :dependent => :nullify
   has_many :changesets, :dependent => :nullify
   has_one :preference, :dependent => :destroy, :class_name => 'UserPreference'
   has_one :rss_token, :dependent => :destroy, :class_name => 'Token', :conditions => "action='feeds'"
+  has_one :api_token, :dependent => :destroy, :class_name => 'Token', :conditions => "action='api'"
   belongs_to :auth_source
   
   # Active non-anonymous users scope
@@ -52,7 +62,7 @@ class User < Principal
   attr_protected :login, :admin, :password, :password_confirmation, :hashed_password, :group_ids
 	
   validates_presence_of :login, :firstname, :lastname, :mail, :if => Proc.new { |user| !user.is_a?(AnonymousUser) }
-  validates_uniqueness_of :login, :if => Proc.new { |user| !user.login.blank? }
+  validates_uniqueness_of :login, :if => Proc.new { |user| !user.login.blank? }, :case_sensitive => false
   validates_uniqueness_of :mail, :if => Proc.new { |user| !user.mail.blank? }, :case_sensitive => false
   # Login must contain lettres, numbers, underscores only
   validates_format_of :login, :with => /^[a-z0-9_\-@\.]*$/i
@@ -64,18 +74,22 @@ class User < Principal
   validates_confirmation_of :password, :allow_nil => true
 
   def before_create
-    self.mail_notification = false
+    self.mail_notification = Setting.default_notification_option if self.mail_notification.blank?
     true
   end
   
   def before_save
     # update hashed_password if password was set
-    self.hashed_password = User.hash_password(self.password) if self.password
+    self.hashed_password = User.hash_password(self.password) if self.password && self.auth_source_id.blank?
   end
   
   def reload(*args)
     @name = nil
     super
+  end
+  
+  def mail=(arg)
+    write_attribute(:mail, arg.to_s.strip)
   end
   
   def identity_url=(url)
@@ -95,7 +109,7 @@ class User < Principal
   def self.try_to_login(login, password)
     # Make sure no one can sign in with an empty password
     return nil if password.to_s.empty?
-    user = find(:first, :conditions => ["login=?", login])
+    user = find_by_login(login)
     if user
       # user is already in local database
       return nil if !user.active?
@@ -110,12 +124,12 @@ class User < Principal
       # user is not yet registered, try to authenticate with available sources
       attrs = AuthSource.authenticate(login, password)
       if attrs
-        user = new(*attrs)
+        user = new(attrs)
         user.login = login
         user.language = Setting.default_language
         if user.save
           user.reload
-          logger.info("User '#{user.login}' created from the LDAP") if logger
+          logger.info("User '#{user.login}' created from external auth source: #{user.auth_source.type} - #{user.auth_source.name}") if logger && user.auth_source
         end
       end
     end    
@@ -159,8 +173,42 @@ class User < Principal
     self.status == STATUS_LOCKED
   end
 
+  def activate
+    self.status = STATUS_ACTIVE
+  end
+
+  def register
+    self.status = STATUS_REGISTERED
+  end
+
+  def lock
+    self.status = STATUS_LOCKED
+  end
+
+  def activate!
+    update_attribute(:status, STATUS_ACTIVE)
+  end
+
+  def register!
+    update_attribute(:status, STATUS_REGISTERED)
+  end
+
+  def lock!
+    update_attribute(:status, STATUS_LOCKED)
+  end
+
   def check_password?(clear_password)
-    User.hash_password(clear_password) == self.hashed_password
+    if auth_source_id.present?
+      auth_source.authenticate(self.login, clear_password)
+    else
+      User.hash_password(clear_password) == self.hashed_password
+    end
+  end
+
+  # Does the backend storage allow this user to change their password?
+  def change_password_allowed?
+    return true if auth_source_id.blank?
+    return auth_source.allow_password_changes?
   end
 
   # Generate and set a random password.  Useful for automated user creation
@@ -192,6 +240,12 @@ class User < Principal
     token = self.rss_token || Token.create(:user => self, :action => 'feeds')
     token.value
   end
+
+  # Return user's API key (a 40 chars long string), used to access the API
+  def api_key
+    token = self.api_token || self.create_api_token(:action => 'api')
+    token.value
+  end
   
   # Return an array of project ids for which the user has explicitly turned mail notifications on
   def notified_projects_ids
@@ -204,20 +258,43 @@ class User < Principal
     @notified_projects_ids = nil
     notified_projects_ids
   end
-  
+
+  # Only users that belong to more than 1 project can select projects for which they are notified
+  def valid_notification_options
+    # Note that @user.membership.size would fail since AR ignores
+    # :include association option when doing a count
+    if memberships.length < 1
+      MAIL_NOTIFICATION_OPTIONS.delete_if {|option| option.first == :selected}
+    else
+      MAIL_NOTIFICATION_OPTIONS
+    end
+  end
+
+  # Find a user account by matching the exact login and then a case-insensitive
+  # version.  Exact matches will be given priority.
+  def self.find_by_login(login)
+    # force string comparison to be case sensitive on MySQL
+    type_cast = (ActiveRecord::Base.connection.adapter_name == 'MySQL') ? 'BINARY' : ''
+    
+    # First look for an exact match
+    user = first(:conditions => ["#{type_cast} login = ?", login])
+    # Fail over to case-insensitive if none was found
+    user ||= first(:conditions => ["#{type_cast} LOWER(login) = ?", login.to_s.downcase])
+  end
+
   def self.find_by_rss_key(key)
     token = Token.find_by_value(key)
+    token && token.user.active? ? token.user : nil
+  end
+  
+  def self.find_by_api_key(key)
+    token = Token.find_by_action_and_value('api', key)
     token && token.user.active? ? token.user : nil
   end
   
   # Makes find_by_mail case-insensitive
   def self.find_by_mail(mail)
     find(:first, :conditions => ["LOWER(mail) = ?", mail.to_s.downcase])
-  end
-
-  # Sort users by their display names
-  def <=>(user)
-    self.to_s.downcase <=> user.to_s.downcase
   end
   
   def to_s
@@ -267,23 +344,35 @@ class User < Principal
     !roles_for_project(project).detect {|role| role.member?}.nil?
   end
   
-  # Return true if the user is allowed to do the specified action on project
-  # action can be:
+  # Return true if the user is allowed to do the specified action on a specific context
+  # Action can be:
   # * a parameter-like Hash (eg. :controller => 'projects', :action => 'edit')
   # * a permission Symbol (eg. :edit_project)
-  def allowed_to?(action, project, options={})
-    if project
+  # Context can be:
+  # * a project : returns true if user is allowed to do the specified action on this project
+  # * a group of projects : returns true if user is allowed on every project
+  # * nil with options[:global] set : check if user has at least one role allowed for this action, 
+  #   or falls back to Non Member / Anonymous permissions depending if the user is logged
+  def allowed_to?(action, context, options={})
+    if context && context.is_a?(Project)
       # No action allowed on archived projects
-      return false unless project.active?
+      return false unless context.active?
       # No action allowed on disabled modules
-      return false unless project.allows_to?(action)
+      return false unless context.allows_to?(action)
       # Admin users are authorized for anything else
       return true if admin?
       
-      roles = roles_for_project(project)
+      roles = roles_for_project(context)
       return false unless roles
-      roles.detect {|role| (project.is_public? || role.member?) && role.allowed_to?(action)}
+      roles.detect {|role| (context.is_public? || role.member?) && role.allowed_to?(action)}
       
+    elsif context && context.is_a?(Array)
+      # Authorize if user is authorized on every element of the array
+      context.map do |project|
+        allowed_to?(action,project,options)
+      end.inject do |memo,allowed|
+        memo && allowed
+      end
     elsif options[:global]
       # Admin users are always authorized
       return true if admin?
@@ -291,6 +380,47 @@ class User < Principal
       # authorize if user has at least one role that has this permission
       roles = memberships.collect {|m| m.roles}.flatten.uniq
       roles.detect {|r| r.allowed_to?(action)} || (self.logged? ? Role.non_member.allowed_to?(action) : Role.anonymous.allowed_to?(action))
+    else
+      false
+    end
+  end
+
+  # Is the user allowed to do the specified action on any project?
+  # See allowed_to? for the actions and valid options.
+  def allowed_to_globally?(action, options)
+    allowed_to?(action, nil, options.reverse_merge(:global => true))
+  end
+  
+  # Utility method to help check if a user should be notified about an
+  # event.
+  #
+  # TODO: only supports Issue events currently
+  def notify_about?(object)
+    case mail_notification.to_sym
+    when :all
+      true
+    when :selected
+      # Handled by the Project
+    when :none
+      false
+    when :only_my_events
+      if object.is_a?(Issue) && (object.author == self || object.assigned_to == self)
+        true
+      else
+        false
+      end
+    when :only_assigned
+      if object.is_a?(Issue) && object.assigned_to == self
+        true
+      else
+        false
+      end
+    when :only_owner
+      if object.is_a?(Issue) && object.author == self
+        true
+      else
+        false
+      end
     else
       false
     end
@@ -346,7 +476,7 @@ class AnonymousUser < User
   # Overrides a few properties
   def logged?; false end
   def admin; false end
-  def name; 'Anonymous' end
+  def name(*args); I18n.t(:label_user_anonymous) end
   def mail; nil end
   def time_zone; nil end
   def rss_key; nil end

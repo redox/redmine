@@ -126,10 +126,16 @@ class SearchControllerTest < ActionController::TestCase
   def test_quick_jump_to_issue
     # issue of a public project
     get :index, :q => "3"
-    assert_redirected_to 'issues/3'
+    assert_redirected_to '/issues/3'
     
     # issue of a private project
     get :index, :q => "4"
+    assert_response :success
+    assert_template 'index'
+  end
+
+  def test_large_integer
+    get :index, :q => '4615713488'
     assert_response :success
     assert_template 'index'
   end
