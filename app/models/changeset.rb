@@ -43,6 +43,9 @@ class Changeset < ActiveRecord::Base
   
   named_scope :visible, lambda {|*args| { :include => {:repository => :project},
                                           :conditions => Project.allowed_to_condition(args.first || User.current, :view_changesets) } }
+
+  after_create :scan_for_issues
+  before_create :set_committer
                                           
   def revision=(r)
     write_attribute :revision, (r.nil? ? nil : r.to_s)
@@ -196,5 +199,13 @@ class Changeset < ActiveRecord::Base
       # "UTF-8//IGNORE" is not supported on some OS
       str
     end
+  end
+  
+  def scan_for_issues
+    scan_comment_for_issue_ids
+  end
+  
+  def set_committer
+    self.user = repository.find_committer_user(committer)
   end
 end

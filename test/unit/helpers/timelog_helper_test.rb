@@ -17,7 +17,7 @@
 
 require File.dirname(__FILE__) + '/../../test_helper'
 
-class TimelogHelperTest < HelperTestCase
+class TimelogHelperTest < ActionView::TestCase
   include TimelogHelper
   include ActionView::Helpers::TextHelper
   include ActionView::Helpers::DateHelper

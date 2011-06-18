@@ -23,27 +23,26 @@ module GanttHelper
       if gantt.zoom < 4
         link_to_remote(l(:text_zoom_in),
                        {:url => gantt.params.merge(:zoom => (gantt.zoom+1)), :method => :get, :update => 'content'},
-                       {:href => url_for(gantt.params.merge(:zoom => (gantt.zoom+1))),
+                       {:href => url_for(gantt.params.merge(:zoom => (gantt.zoom+1))).html_safe,
                         :class => 'icon icon-zoom-in'})
       else
-        content_tag('span', l(:text_zoom_in), :class => 'icon icon-zoom-in')
+        content_tag('span', l(:text_zoom_in), :class => 'icon icon-zoom-in').html_safe
       end
-      
+
     when :out
       if gantt.zoom > 1
         link_to_remote(l(:text_zoom_out),
                        {:url => gantt.params.merge(:zoom => (gantt.zoom-1)), :method => :get, :update => 'content'},
-                       {:href => url_for(gantt.params.merge(:zoom => (gantt.zoom-1))),
+                       {:href => url_for(gantt.params.merge(:zoom => (gantt.zoom-1))).html_safe,
                         :class => 'icon icon-zoom-out'})
       else
-        content_tag('span', l(:text_zoom_out), :class => 'icon icon-zoom-out')
+        content_tag('span', l(:text_zoom_out), :class => 'icon icon-zoom-out').html_safe
       end
     end
   end
-  
+
   def number_of_issues_on_versions(gantt)
     versions = gantt.events.collect {|event| (event.is_a? Version) ? event : nil}.compact
-
     versions.sum {|v| v.fixed_issues.for_gantt.with_query(@query).count}
   end
 end

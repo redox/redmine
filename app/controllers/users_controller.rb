@@ -97,7 +97,7 @@ class UsersController < ApplicationController
       @user.pref.save
       @user.notified_project_ids = (params[:notification_option] == 'selected' ? params[:notified_project_ids] : [])
 
-      Mailer.deliver_account_information(@user, params[:password]) if params[:send_information]
+      Mailer.account_information(@user, params[:password]) if params[:send_information]
       flash[:notice] = l(:notice_successful_create)
       redirect_to(params[:continue] ? {:controller => 'users', :action => 'new'} : 
                                       {:controller => 'users', :action => 'edit', :id => @user})
@@ -144,9 +144,9 @@ class UsersController < ApplicationController
       @user.notified_project_ids = (params[:notification_option] == 'selected' ? params[:notified_project_ids] : [])
 
       if was_activated
-        Mailer.deliver_account_activated(@user)
+        Mailer.account_activated(@user)
       elsif @user.active? && params[:send_information] && !params[:password].blank? && @user.auth_source_id.nil?
-        Mailer.deliver_account_information(@user, params[:password])
+        Mailer.account_information(@user, params[:password])
       end
       flash[:notice] = l(:notice_successful_update)
       redirect_to :back

@@ -44,7 +44,7 @@ module RFPDF
         # Filename of pdf to generate
         :file_name => "#{@action_view.controller.action_name}.pdf",
         # Temporary Directory
-        :temp_dir => "#{File.expand_path(RAILS_ROOT)}/tmp"
+        :temp_dir => "#{File.expand_path(Rails.root)}/tmp"
       }.merge(@action_view.controller.instance_eval{ @options_for_rfpdf } || {}).with_indifferent_access
     end
     

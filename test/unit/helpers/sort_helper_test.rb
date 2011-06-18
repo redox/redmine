@@ -17,7 +17,7 @@
 
 require File.dirname(__FILE__) + '/../../test_helper'
 
-class SortHelperTest < HelperTestCase
+class SortHelperTest < ActionView::TestCase
   include SortHelper
   
   def setup

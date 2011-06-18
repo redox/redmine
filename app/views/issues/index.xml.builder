@@ -29,5 +29,5 @@ xml.issues :type => 'array' do
       xml.created_on issue.created_on
       xml.updated_on issue.updated_on
     end
-  end
+  end if not @issues.nil?
 end

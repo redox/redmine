@@ -1,3 +1,4 @@
+# coding: UTF-8
 # Redmine - project management software
 # Copyright (C) 2006-2010  Jean-Philippe Lang
 #
@@ -193,7 +194,7 @@ module ApplicationHelper
     flash.each do |k,v|
       s << content_tag('div', v, :class => "flash #{k}")
     end
-    s
+    s.html_safe
   end
   
   # Renders tabs and their content
@@ -206,6 +207,7 @@ module ApplicationHelper
   end
   
   # Renders the project quick-jump box
+  # FIXME: should be a partial
   def render_project_jump_box
     # Retrieve them now to avoid a COUNT query
     projects = User.current.projects.all
@@ -217,7 +219,7 @@ module ApplicationHelper
         { :value => url_for(:controller => 'projects', :action => 'show', :id => p, :jump => current_menu_item) }
       end
       s << '</select>'
-      s
+      s.html_safe
     end
   end
   
@@ -234,7 +236,7 @@ module ApplicationHelper
       tag_options.merge!(yield(project)) if block_given?
       s << content_tag('option', name_prefix + h(project), tag_options)
     end
-    s
+    s.html_safe
   end
   
   # Yields the given block for each project with its level in the tree
@@ -265,7 +267,7 @@ module ApplicationHelper
       end
       s << ("</li></ul>\n" * ancestors.size)
     end
-    s
+    s.html_safe
   end
   
   def principals_check_box_tags(name, principals)
@@ -273,7 +275,7 @@ module ApplicationHelper
     principals.sort.each do |principal|
       s << "<label>#{ check_box_tag name, principal.id, false } #{h principal}</label>\n"
     end
-    s 
+    s.html_safe
   end
 
   # Truncates and returns the string as a single line
@@ -292,11 +294,11 @@ module ApplicationHelper
   end
 
   def html_hours(text)
-    text.gsub(%r{(\d+)\.(\d+)}, '<span class="hours hours-int">\1</span><span class="hours hours-dec">.\2</span>')
+    text.gsub(%r{(\d+)\.(\d+)}, '<span class="hours hours-int">\1</span><span class="hours hours-dec">.\2</span>').html_safe
   end
 
   def authoring(created, author, options={})
-    l(options[:label] || :label_added_time_by, :author => link_to_user(author), :age => time_tag(created))
+    l(options[:label] || :label_added_time_by, :author => link_to_user(author), :age => time_tag(created)).html_safe
   end
   
   def time_tag(time)
@@ -325,7 +327,7 @@ module ApplicationHelper
 
     html = ''
     if paginator.current.previous
-      html << link_to_remote_content_update('&#171; ' + l(:label_previous), url_param.merge(page_param => paginator.current.previous)) + ' '
+      html << link_to_remote_content_update('« ' + l(:label_previous), url_param.merge(page_param => paginator.current.previous)) + ' '
     end
 
     html << (pagination_links_each(paginator, options) do |n|
@@ -333,7 +335,7 @@ module ApplicationHelper
     end || '')
     
     if paginator.current.next
-      html << ' ' + link_to_remote_content_update((l(:label_next) + ' &#187;'), url_param.merge(page_param => paginator.current.next))
+      html << ' ' + link_to_remote_content_update((l(:label_next) + ' »'), url_param.merge(page_param => paginator.current.next))
     end
 
     unless count.nil?
@@ -343,7 +345,7 @@ module ApplicationHelper
       end
     end
 
-    html
+    html.html_safe
   end
   
   def per_page_links(selected=nil)
@@ -372,9 +374,8 @@ module ApplicationHelper
   end
   
   def other_formats_links(&block)
-    concat('<p class="other-formats">' + l(:label_export_to))
-    yield Redmine::Views::OtherFormatsBuilder.new(self)
-    concat('</p>')
+    html = yield Redmine::Views::OtherFormatsBuilder.new(self)
+    "<p class='other-formats'>#{l(:label_export_to)} #{html}</p>".html_safe
   end
   
   def page_header_title
@@ -483,7 +484,7 @@ module ApplicationHelper
     while tag = tags.pop
       parsed << "</#{tag}>"
     end
-    parsed
+    parsed.html_safe
   end
   
   def parse_inline_attachments(text, project, obj, attr, only_path, options)
@@ -500,9 +501,9 @@ module ApplicationHelper
           if !desc.blank? && alttext.blank?
             alt = " title=\"#{desc}\" alt=\"#{desc}\""
           end
-          "src=\"#{image_url}\"#{alt}"
+          "src=\"#{image_url}\"#{alt}".html_safe
         else
-          m
+          m.html_safe
         end
       end
     end
@@ -547,10 +548,10 @@ module ApplicationHelper
           link_to((title || page), url, :class => ('wiki-page' + (wiki_page ? '' : ' new')))
         else
           # project or wiki doesn't exist
-          all
+          all.html_safe
         end
       else
-        all
+        all.html_safe
       end
     end
   end
@@ -670,7 +671,7 @@ module ApplicationHelper
           end
         end
       end
-      leading + (link || "#{prefix}#{sep}#{identifier}")
+      (leading + (link || "#{prefix}#{sep}#{identifier}")).html_safe
     end
   end
   
@@ -739,7 +740,7 @@ module ApplicationHelper
   def labelled_tabular_form_for(name, object, options, &proc)
     options[:html] ||= {}
     options[:html][:class] = 'tabular' unless options[:html].has_key?(:class)
-    form_for(name, object, options.merge({ :builder => TabularFormBuilder, :lang => current_language}), &proc)
+    form_for(object, options.merge({ :builder => TabularFormBuilder, :lang => current_language, :as => name}), &proc)
   end
 
   def back_url_hidden_field_tag
@@ -750,7 +751,7 @@ module ApplicationHelper
 
   def check_all_links(form_name)
     link_to_function(l(:button_check_all), "checkAll('#{form_name}', true)") +
-    " | " +
+    " | ".html_safe +
     link_to_function(l(:button_uncheck_all), "checkAll('#{form_name}', false)")
   end
 
@@ -763,11 +764,11 @@ module ApplicationHelper
     legend = options[:legend] || ''
     content_tag('table',
       content_tag('tr',
-        (pcts[0] > 0 ? content_tag('td', '', :style => "width: #{pcts[0]}%;", :class => 'closed') : '') +
-        (pcts[1] > 0 ? content_tag('td', '', :style => "width: #{pcts[1]}%;", :class => 'done') : '') +
-        (pcts[2] > 0 ? content_tag('td', '', :style => "width: #{pcts[2]}%;", :class => 'todo') : '')
-      ), :class => 'progress', :style => "width: #{width};") +
-      content_tag('p', legend, :class => 'pourcent')
+        (pcts[0] > 0 ? content_tag('td', '', :style => "width: #{pcts[0]}%;", :class => 'closed') : ''.html_safe) +
+        (pcts[1] > 0 ? content_tag('td', '', :style => "width: #{pcts[1]}%;", :class => 'done') : ''.html_safe) +
+        (pcts[2] > 0 ? content_tag('td', '', :style => "width: #{pcts[2]}%;", :class => 'todo') : ''.html_safe)
+      ), :class => 'progress', :style => "width: #{width};").html_safe +
+      content_tag('p', legend, :class => 'pourcent').html_safe
   end
   
   def checked_image(checked=true)

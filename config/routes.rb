@@ -106,7 +106,6 @@ ActionController::Routing::Routes.draw do |map|
     relations.connect 'issues/:issue_id/relations/:id', :action => 'new'
     relations.connect 'issues/:issue_id/relations/:id/destroy', :action => 'destroy'
   end
-
   map.connect 'projects/:id/members/new', :controller => 'members', :action => 'new'
 
   map.with_options :controller => 'users' do |users|

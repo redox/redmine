@@ -16,12 +16,12 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 ENV["RAILS_ENV"] = "test"
-require File.expand_path(File.dirname(__FILE__) + "/../config/environment")
-require 'test_help'
-require File.expand_path(File.dirname(__FILE__) + '/helper_testcase')
-require File.join(RAILS_ROOT,'test', 'mocks', 'open_id_authentication_mock.rb')
+require File.expand_path('../../config/environment', __FILE__)
+require 'rails/test_help'
+require 'shoulda'
+require 'mocks/open_id_authentication_mock'
 
-require File.expand_path(File.dirname(__FILE__) + '/object_daddy_helpers')
+require 'object_daddy_helpers'
 include ObjectDaddyHelpers
 
 class ActiveSupport::TestCase
@@ -78,9 +78,8 @@ class ActiveSupport::TestCase
 
   # Use a temporary directory for attachment related tests
   def set_tmp_attachments_directory
-    Dir.mkdir "#{RAILS_ROOT}/tmp/test" unless File.directory?("#{RAILS_ROOT}/tmp/test")
-    Dir.mkdir "#{RAILS_ROOT}/tmp/test/attachments" unless File.directory?("#{RAILS_ROOT}/tmp/test/attachments")
-    Attachment.storage_path = "#{RAILS_ROOT}/tmp/test/attachments"
+    Rails.root.join('tmp/test/attachments').mkdir_p
+    Attachment.storage_path = "#{Rails.root}/tmp/test/attachments"
   end
   
   def with_settings(options, &block)
@@ -106,7 +105,7 @@ class ActiveSupport::TestCase
   
   # Returns the path to the test +vendor+ repository
   def self.repository_path(vendor)
-    File.join(RAILS_ROOT.gsub(%r{config\/\.\.}, ''), "/tmp/test/#{vendor.downcase}_repository")
+    File.expand_path("../../tmp/test/#{vendor.downcase}_repository", __FILE__)
   end
   
   # Returns true if the +vendor+ test repository is configured

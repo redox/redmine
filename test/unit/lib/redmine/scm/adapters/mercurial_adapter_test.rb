@@ -8,7 +8,7 @@ begin
     TEMPLATE_NAME = Redmine::Scm::Adapters::MercurialAdapter::TEMPLATE_NAME
     TEMPLATE_EXTENSION = Redmine::Scm::Adapters::MercurialAdapter::TEMPLATE_EXTENSION
     
-    REPOSITORY_PATH = RAILS_ROOT.gsub(%r{config\/\.\.}, '') + '/tmp/test/mercurial_repository'
+    REPOSITORY_PATH = Rails.root.join('tmp/test/mercurial_repository')
     
     def test_hgversion
       to_test = { "Mercurial Distributed SCM (version 0.9.5)\n" => [0,9,5],

@@ -29,14 +29,10 @@ class Document < ActiveRecord::Base
   validates_presence_of :project, :title, :category
   validates_length_of :title, :maximum => 60
   
+  after_initialize :update_category
+  
   def visible?(user=User.current)
     !user.nil? && user.allowed_to?(:view_documents, project)
-  end
-  
-  def after_initialize
-    if new_record?
-      self.category ||= DocumentCategory.default
-    end
   end
   
   def updated_on
@@ -45,5 +41,13 @@ class Document < ActiveRecord::Base
       @updated_on = (a && a.created_on) || created_on
     end
     @updated_on
+  end
+  
+  private
+  
+  def update_category
+    if new_record?
+      self.category ||= DocumentCategory.default
+    end
   end
 end

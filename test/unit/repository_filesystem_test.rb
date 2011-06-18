@@ -21,7 +21,7 @@ class RepositoryFilesystemTest < ActiveSupport::TestCase
   fixtures :projects
   
   # No '..' in the repository path
-  REPOSITORY_PATH = RAILS_ROOT.gsub(%r{config\/\.\.}, '') + '/tmp/test/filesystem_repository'
+  REPOSITORY_PATH = Rails.root.join('tmp/test/filesystem_repository')
   
   def setup
     @project = Project.find(1)

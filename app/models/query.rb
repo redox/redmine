@@ -84,6 +84,7 @@ class Query < ActiveRecord::Base
   
   validates_presence_of :name, :on => :save
   validates_length_of :name, :maximum => 255
+  validate :validate_query_filters
     
   @@operators = { "="   => :label_equals, 
                   "!"   => :label_not_equals,
@@ -137,18 +138,17 @@ class Query < ActiveRecord::Base
     QueryColumn.new(:created_on, :sortable => "#{Issue.table_name}.created_on", :default_order => 'desc'),
   ]
   cattr_reader :available_columns
+  attr_accessor :subject, :created_on, :updated_on, :start_date, :due_date, :estimated_hours, :done_ratio
+  
+  after_initialize :is_project_nil
   
   def initialize(attributes = nil)
     super attributes
     self.filters ||= { 'status_id' => {:operator => "o", :values => [""]} }
   end
   
-  def after_initialize
-    # Store the fact that project is nil (used in #editable_by?)
-    @is_for_all = project.nil?
-  end
-  
-  def validate
+  # FIXME: not working as expected, this needs to be completely refactored for Rails 3
+  def validate_query_filters
     filters.each_key do |field|
       errors.add label_for(field), :blank unless 
           # filter requires one or more values
@@ -284,11 +284,11 @@ class Query < ActiveRecord::Base
 
   def available_columns
     return @available_columns if @available_columns
-    @available_columns = Query.available_columns
-    @available_columns += (project ? 
-                            project.all_issue_custom_fields :
-                            IssueCustomField.find(:all)
-                           ).collect {|cf| QueryCustomFieldColumn.new(cf) }      
+    print "BLOW"
+    @available_columns = @@available_columns
+    #@available_columns += (IssueCustomField.find(:all)
+    #                       ).collect {|cf| QueryCustomFieldColumn.new(cf)}
+    puts "BLOW2"    
   end
 
   def self.available_columns=(v)
@@ -306,6 +306,7 @@ class Query < ActiveRecord::Base
 
   # Returns a Hash of columns and the key for sorting
   def sortable_columns
+    puts available_columns
     {'id' => "#{Issue.table_name}.id"}.merge(available_columns.inject({}) {|h, column|
                                                h[column.name.to_s] = column.sortable
                                                h
@@ -528,7 +529,7 @@ class Query < ActiveRecord::Base
     order_option = nil if order_option.blank?
     
     Issue.find :all, :include => ([:status, :project] + (options[:include] || [])).uniq,
-                     :conditions => Query.merge_conditions(statement, options[:conditions]),
+                     :conditions => merge_conditions(statement, options[:conditions]),
                      :order => order_option,
                      :limit  => options[:limit],
                      :offset => options[:offset]
@@ -552,7 +553,7 @@ class Query < ActiveRecord::Base
   # Valid options are :conditions
   def versions(options={})
     Version.find :all, :include => :project,
-                       :conditions => Query.merge_conditions(project_statement, options[:conditions])
+                       :conditions => merge_conditions(project_statement, options[:conditions])
   rescue ::ActiveRecord::StatementInvalid => e
     raise StatementInvalid.new(e.message)
   end
@@ -641,5 +642,23 @@ class Query < ActiveRecord::Base
       s << ("#{table}.#{field} <= '%s'" % [connection.quoted_date((Date.today + to).to_time.end_of_day)])
     end
     s.join(' AND ')
+  end
+  
+  def is_project_nil
+    # Store the fact that project is nil (used in #editable_by?)
+    @is_for_all = project.nil?
+  end
+  
+  def merge_conditions(*conditions)
+    segments = []
+
+    conditions.each do |condition|
+      unless condition.blank?
+        sql = self.class.send(:sanitize_sql, condition)
+        segments << sql unless sql.blank?
+      end
+    end
+
+    "(#{segments.join(') AND (')})" unless segments.empty?
   end
 end

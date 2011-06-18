@@ -46,13 +46,13 @@ module IssuesHelper
     @cached_label_priority ||= l(:field_priority)
     @cached_label_project ||= l(:field_project)
 
-    link_to_issue(issue) + "<br /><br />" +
+    (link_to_issue(issue) + "<br /><br />" +
       "<strong>#{@cached_label_project}</strong>: #{link_to_project(issue.project)}<br />" +
       "<strong>#{@cached_label_status}</strong>: #{issue.status.name}<br />" +
       "<strong>#{@cached_label_start_date}</strong>: #{format_date(issue.start_date)}<br />" +
       "<strong>#{@cached_label_due_date}</strong>: #{format_date(issue.due_date)}<br />" +
       "<strong>#{@cached_label_assigned_to}</strong>: #{issue.assigned_to}<br />" +
-      "<strong>#{@cached_label_priority}</strong>: #{issue.priority.name}"
+      "<strong>#{@cached_label_priority}</strong>: #{issue.priority.name}").html_safe
   end
     
   def render_issue_subject_with_tree(issue)
@@ -62,7 +62,7 @@ module IssuesHelper
     end
     s << '<div>' + content_tag('h3', h(issue.subject))
     s << '</div>' * (issue.ancestors.size + 1)
-    s
+    s.html_safe
   end
   
   def render_descendants_tree(issue)
@@ -77,7 +77,7 @@ module IssuesHelper
              :class => "issue issue-#{child.id} hascontextmenu #{level > 0 ? "idnt idnt-#{level}" : nil}")
     end
     s << '</form></table>'
-    s
+    s.html_safe
   end
   
   def render_custom_fields_rows(issue)
@@ -96,7 +96,7 @@ module IssuesHelper
       n += 1
     end
     s << "</tr>\n"
-    s
+    s.html_safe
   end
   
   def sidebar_queries

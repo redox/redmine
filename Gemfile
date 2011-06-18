@@ -1,17 +1,23 @@
+# source 'http://rubygems.org'
 source :rubygems
 source :rubyforge
 source :gemcutter
 
-gem 'bundler', '~> 1.0.0'
+# gem 'bundler', '~> 1.0.0'
 # gem 'rails', '2.3.11'
-gem 'rails', '2.3.4'
+# gem 'rails', '2.3.4'
+gem 'rails', '3.0.6'
+
+gem 'rubytree', '0.7.0'
 # gem 'rack' , '~> 1.1.1'
-gem 'rack'
+# gem 'rack'
 # gem 'i18n', '>= 0.4.2'
-gem 'i18n'
-gem 'rubytree', '0.5.2', :require => 'tree'
-gem 'rdoc',    '>= 2.4.2'
+# gem 'i18n'
+# gem 'rubytree', '0.5.2', :require => 'tree'
 gem 'coderay', '~> 0.9.7'
+
+gem 'ruby-prof', :git => 'http://github.com/wycats/ruby-prof.git'
+gem 'jquery-rails'
 
 group :development do
 end
@@ -20,13 +26,14 @@ group :production do
 end
 
 group :test do
+  gem 'test-unit'
   gem 'shoulda', '~> 2.10.3'
   gem 'mocha'
   gem 'edavis10-object_daddy', :require => 'object_daddy'
 end
 
 group :openid do
-  gem "ruby-openid", '~> 2.1.4', :require => 'openid'
+  # gem "ruby-openid", '~> 2.1.4', :require => 'openid'
 end
 
 group :rmagick do
@@ -81,3 +88,4 @@ Dir.glob(File.join(File.dirname(__FILE__), %w(vendor plugins * Gemfile))) do |fi
   puts "Loading #{file} ..." if $DEBUG # `ruby -d` or `bundle -v`
   instance_eval File.read(file)
 end
+

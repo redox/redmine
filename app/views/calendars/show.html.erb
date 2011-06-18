@@ -19,7 +19,7 @@
 <%= label_tag('year', l(:label_year)) %>
 <%= select_year(@year, :prefix => "year", :discard_type => true) %>
 
-<%= link_to_remote l(:button_apply), 
+<%= link_to_remote l(:button_apply),
                    { :url => { :set_filter => (@query.new_record? ? 1 : nil) },
                      :update => "content",
                      :with => "Form.serialize('query_form')"
@@ -33,7 +33,7 @@
 </p>
 <% end %>
 
-<%= error_messages_for 'query' %>
+<%= error_messages_for %> <!-- FIXME: missing 'query' -->
 <% if @query.valid? %>
 <%= render :partial => 'common/calendar', :locals => {:calendar => @calendar} %>
 

@@ -19,7 +19,7 @@
 
 require File.dirname(__FILE__) + '/../../test_helper'
 
-class SearchHelperTest < HelperTestCase
+class SearchHelperTest < ActionView::TestCase
   include SearchHelper
   
   def test_highlight_single_token

@@ -17,7 +17,7 @@
 
 require File.dirname(__FILE__) + '/../../test_helper'
 
-class CustomFieldsHelperTest < HelperTestCase
+class CustomFieldsHelperTest < ActionView::TestCase
   include CustomFieldsHelper
   include Redmine::I18n
   
