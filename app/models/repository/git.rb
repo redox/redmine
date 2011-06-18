@@ -21,12 +21,22 @@ class Repository::Git < Repository
   attr_protected :root_url
   validates_presence_of :url
 
-  def scm_adapter
+  def self.scm_adapter_class
     Redmine::Scm::Adapters::GitAdapter
   end
-  
+
   def self.scm_name
     'Git'
+  end
+
+  # Returns the identifier for the given git changeset
+  def self.changeset_identifier(changeset)
+    changeset.scmid
+  end
+
+  # Returns the readable identifier for the given git changeset
+  def self.format_changeset_identifier(changeset)
+    changeset.revision[0, 8]
   end
 
   def branches
@@ -35,6 +45,13 @@ class Repository::Git < Repository
 
   def tags
     scm.tags
+  end
+
+  def find_changeset_by_name(name)
+    return nil if name.nil? || name.empty?
+    e = changesets.find(:first, :conditions => ['revision = ?', name.to_s])
+    return e if e
+    changesets.find(:first, :conditions => ['scmid LIKE ?', "#{name}%"])
   end
 
   # With SCM's that have a sequential commit numbering, redmine is able to be

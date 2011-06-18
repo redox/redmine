@@ -10,7 +10,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20101114115359) do
+ActiveRecord::Schema.define(:version => 20110220160626) do
 
   create_table "attachments", :force => true do |t|
     t.integer  "container_id",                 :default => 0,  :null => false
@@ -565,10 +565,12 @@ ActiveRecord::Schema.define(:version => 20101114115359) do
   add_index "wikis", ["project_id"], :name => "wikis_project_id"
 
   create_table "workflows", :force => true do |t|
-    t.integer "tracker_id",    :default => 0, :null => false
-    t.integer "old_status_id", :default => 0, :null => false
-    t.integer "new_status_id", :default => 0, :null => false
-    t.integer "role_id",       :default => 0, :null => false
+    t.integer "tracker_id",    :default => 0,     :null => false
+    t.integer "old_status_id", :default => 0,     :null => false
+    t.integer "new_status_id", :default => 0,     :null => false
+    t.integer "role_id",       :default => 0,     :null => false
+    t.boolean "assignee",      :default => false, :null => false
+    t.boolean "author",        :default => false, :null => false
   end
 
   add_index "workflows", ["new_status_id"], :name => "index_workflows_on_new_status_id"

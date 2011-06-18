@@ -18,73 +18,90 @@
 require 'redmine/scm/adapters/mercurial_adapter'
 
 class Repository::Mercurial < Repository
+  # sort changesets by revision number
+  has_many :changesets, :order => "#{Changeset.table_name}.id DESC", :foreign_key => 'repository_id'
+
   attr_protected :root_url
   validates_presence_of :url
 
-  def scm_adapter
+  FETCH_AT_ONCE = 100  # number of changesets to fetch at once
+
+  def self.scm_adapter_class
     Redmine::Scm::Adapters::MercurialAdapter
   end
-  
+
   def self.scm_name
     'Mercurial'
   end
-  
-  def entries(path=nil, identifier=nil)
-    entries=scm.entries(path, identifier)
-    if entries
-      entries.each do |entry|
-        next unless entry.is_file?
-        # Set the filesize unless browsing a specific revision
-        if identifier.nil?
-          full_path = File.join(root_url, entry.path)
-          entry.size = File.stat(full_path).size if File.file?(full_path)
-        end
-        # Search the DB for the entry's last change
-        change = changes.find(:first, :conditions => ["path = ?", scm.with_leading_slash(entry.path)], :order => "#{Changeset.table_name}.committed_on DESC")
-        if change
-          entry.lastrev.identifier = change.changeset.revision
-          entry.lastrev.name = change.changeset.revision
-          entry.lastrev.author = change.changeset.committer
-          entry.lastrev.revision = change.revision
-        end
-      end
+
+  # Returns the readable identifier for the given mercurial changeset
+  def self.format_changeset_identifier(changeset)
+    "#{changeset.revision}:#{changeset.scmid}"
+  end
+
+  # Returns the identifier for the given Mercurial changeset
+  def self.changeset_identifier(changeset)
+    changeset.scmid
+  end
+
+  def branches
+    nil
+  end
+
+  def tags
+    nil
+  end
+
+  def diff_format_revisions(cs, cs_to, sep=':')
+    super(cs, cs_to, ' ')
+  end
+
+  # Finds and returns a revision with a number or the beginning of a hash
+  def find_changeset_by_name(name)
+    return nil if name.nil? || name.empty?
+    if /[^\d]/ =~ name or name.to_s.size > 8
+      e = changesets.find(:first, :conditions => ['scmid = ?', name.to_s])
+    else
+      e = changesets.find(:first, :conditions => ['revision = ?', name.to_s])
     end
-    entries
+    return e if e
+    changesets.find(:first, :conditions => ['scmid LIKE ?', "#{name}%"])  # last ditch
+  end
+
+  # Returns the latest changesets for +path+; sorted by revision number
+  # Default behavior is to search in cached changesets
+  def latest_changesets(path, rev, limit=10)
+    if path.blank?
+      changesets.find(:all, :include => :user, :limit => limit)
+    else
+      changesets.find(:all, :select => "DISTINCT #{Changeset.table_name}.*",
+                      :joins => :changes,
+                      :conditions => ["#{Change.table_name}.path = ? OR #{Change.table_name}.path LIKE ? ESCAPE ?",
+                                      path.with_leading_slash,
+                                      "#{path.with_leading_slash.gsub(/[%_\\]/) { |s| "\\#{s}" }}/%", '\\'],
+                      :include => :user, :limit => limit)
+    end
   end
 
   def fetch_changesets
-    scm_info = scm.info
-    if scm_info
-      # latest revision found in database
-      db_revision = latest_changeset ? latest_changeset.revision.to_i : -1
-      # latest revision in the repository
-      latest_revision = scm_info.lastrev
-      return if latest_revision.nil?
-      scm_revision = latest_revision.identifier.to_i
-      if db_revision < scm_revision
-        logger.debug "Fetching changesets for repository #{url}" if logger && logger.debug?
-        identifier_from = db_revision + 1
-        while (identifier_from <= scm_revision)
-          # loads changesets by batches of 100
-          identifier_to = [identifier_from + 99, scm_revision].min
-          revisions = scm.revisions('', identifier_from, identifier_to, :with_paths => true)
-          transaction do
-            revisions.each do |revision|
-              changeset = Changeset.create(:repository => self,
-                                           :revision => revision.identifier,
-                                           :scmid => revision.scmid,
-                                           :committer => revision.author, 
-                                           :committed_on => revision.time,
-                                           :comments => revision.message)
-              
-              revision.paths.each do |change|
-                changeset.create_change(change)
-              end
-            end
-          end unless revisions.nil?
-          identifier_from = identifier_to + 1
+    scm_rev = scm.info.lastrev.revision.to_i
+    db_rev = latest_changeset ? latest_changeset.revision.to_i : -1
+    return unless db_rev < scm_rev  # already up-to-date
+
+    logger.debug "Fetching changesets for repository #{url}" if logger
+    (db_rev + 1).step(scm_rev, FETCH_AT_ONCE) do |i|
+      transaction do
+        scm.each_revision('', i, [i + FETCH_AT_ONCE - 1, scm_rev].min) do |re|
+          cs = Changeset.create(:repository => self,
+                                :revision => re.revision,
+                                :scmid => re.scmid,
+                                :committer => re.author,
+                                :committed_on => re.time,
+                                :comments => re.message)
+          re.paths.each { |e| cs.create_change(e) }
         end
       end
     end
+    self
   end
 end

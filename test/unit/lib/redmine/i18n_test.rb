@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-require File.dirname(__FILE__) + '/../../../test_helper'
+require File.expand_path('../../../../test_helper', __FILE__)
 
 class Redmine::I18nTest < ActiveSupport::TestCase
   include Redmine::I18n
@@ -29,7 +29,7 @@ class Redmine::I18nTest < ActiveSupport::TestCase
     set_language_if_valid 'en'
     today = Date.today
     Setting.date_format = ''    
-    assert_equal I18n.l(today, :count => today.strftime('%d')), format_date(today)
+    assert_equal I18n.l(today), format_date(today)
   end
   
   def test_date_format
@@ -47,7 +47,7 @@ class Redmine::I18nTest < ActiveSupport::TestCase
         format_date(Date.today)
         format_time(Time.now)
         format_time(Time.now, false)
-        assert_not_equal 'default', ::I18n.l(Date.today, :count => Date.today.strftime('%d'), :format => :default), "date.formats.default missing in #{lang}"
+        assert_not_equal 'default', ::I18n.l(Date.today, :format => :default), "date.formats.default missing in #{lang}"
         assert_not_equal 'time',    ::I18n.l(Time.now, :format => :time),      "time.formats.time missing in #{lang}"
       end
       assert l('date.day_names').is_a?(Array)
@@ -58,13 +58,36 @@ class Redmine::I18nTest < ActiveSupport::TestCase
     end
   end
   
+  def test_time_format
+    set_language_if_valid 'en'
+    now = Time.parse('2011-02-20 15:45:22')
+    with_settings :time_format => '%H:%M' do
+      with_settings :date_format => '' do
+        assert_equal '02/20/2011 15:45', format_time(now)
+        assert_equal '15:45', format_time(now, false)
+      end
+      
+      with_settings :date_format => '%Y-%m-%d' do
+        assert_equal '2011-02-20 15:45', format_time(now)
+        assert_equal '15:45', format_time(now, false)
+      end
+    end
+  end
+  
   def test_time_format_default
     set_language_if_valid 'en'
-    now = Time.now
-    Setting.date_format = ''
-    Setting.time_format = ''    
-    assert_equal I18n.l(now, :count => now.strftime('%d')), format_time(now)
-    assert_equal I18n.l(now, :count => now.strftime('%d'), :format => :time), format_time(now, false)
+    now = Time.parse('2011-02-20 15:45:22')
+    with_settings :time_format => '' do
+      with_settings :date_format => '' do
+        assert_equal '02/20/2011 03:45 pm', format_time(now)
+        assert_equal '03:45 pm', format_time(now, false)
+      end
+      
+      with_settings :date_format => '%Y-%m-%d' do
+        assert_equal '2011-02-20 03:45 pm', format_time(now)
+        assert_equal '03:45 pm', format_time(now, false)
+      end
+    end
   end
   
   def test_time_format
@@ -108,5 +131,19 @@ class Redmine::I18nTest < ActiveSupport::TestCase
                'zh-ZZ' => nil }
     
     to_test.each {|lang, expected| assert_equal expected, find_language(lang)}
+  end
+  
+  def test_fallback
+    ::I18n.backend.store_translations(:en, {:untranslated => "Untranslated string"})
+    ::I18n.locale = 'en'
+    assert_equal "Untranslated string", l(:untranslated)
+    ::I18n.locale = 'fr'
+    assert_equal "Untranslated string", l(:untranslated)
+    
+    ::I18n.backend.store_translations(:fr, {:untranslated => "Pas de traduction"})
+    ::I18n.locale = 'en'
+    assert_equal "Untranslated string", l(:untranslated)
+    ::I18n.locale = 'fr'
+    assert_equal "Pas de traduction", l(:untranslated)
   end
 end

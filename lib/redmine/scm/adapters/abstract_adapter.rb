@@ -19,12 +19,16 @@ require 'cgi'
 
 module Redmine
   module Scm
-    module Adapters    
+    module Adapters
       class CommandFailed < StandardError #:nodoc:
       end
-      
+
       class AbstractAdapter #:nodoc:
         class << self
+          def client_command
+            ""
+          end
+
           # Returns the version of the scm client
           # Eg: [1, 5, 0] or [] if unknown
           def client_version
@@ -45,8 +49,20 @@ module Redmine
           def client_version_above?(v, options={})
             ((client_version <=> v) >= 0) || (client_version.empty? && options[:unknown])
           end
+
+          def client_available
+            true
+          end
+
+          def shell_quote(str)
+            if Redmine::Platform.mswin?
+              '"' + str.gsub(/"/, '\\"') + '"'
+            else
+              "'" + str.gsub(/'/, "'\"'\"'") + "'"
+            end
+          end
         end
-                
+
         def initialize(url, root_url=nil, login=nil, password=nil)
           @url = url
           @login = login if login && !login.empty?
@@ -138,7 +154,7 @@ module Redmine
           path ||= ''
           (path[-1,1] == "/") ? path : "#{path}/"
         end
-        
+
         def without_leading_slash(path)
           path ||= ''
           path.gsub(%r{^/+}, '')
@@ -148,13 +164,9 @@ module Redmine
           path ||= ''
           (path[-1,1] == "/") ? path[0..-2] : path
          end
-        
+
         def shell_quote(str)
-          if Redmine::Platform.mswin?
-            '"' + str.gsub(/"/, '\\"') + '"'
-          else
-            "'" + str.gsub(/'/, "'\"'\"'") + "'"
-          end
+          self.class.shell_quote(str)
         end
 
       private
@@ -168,19 +180,19 @@ module Redmine
           base = path.match(/^\//) ? root_url : url
           shell_quote("#{base}/#{path}".gsub(/[?<>\*]/, ''))
         end
-            
+
         def logger
           self.class.logger
         end
-        
+
         def shellout(cmd, &block)
           self.class.shellout(cmd, &block)
         end
-        
+
         def self.logger
           RAILS_DEFAULT_LOGGER
         end
-        
+
         def self.shellout(cmd, &block)
           logger.debug "Shelling out: #{strip_credential(cmd)}" if logger && logger.debug?
           if Rails.env == 'development'
@@ -198,8 +210,8 @@ module Redmine
             logger.error("SCM command failed, make sure that your SCM binary (eg. svn) is in PATH (#{ENV['PATH']}): #{strip_credential(cmd)}\n  with: #{msg}")
             raise CommandFailed.new(msg)
           end
-        end  
-        
+        end
+
         # Hides username/password in a given command
         def self.strip_credential(cmd)
           q = (Redmine::Platform.mswin? ? '"' : "'")
@@ -219,7 +231,7 @@ module Redmine
             else
               x.kind <=> y.kind
             end
-          }   
+          }
         end
         
         def revisions
@@ -271,7 +283,8 @@ module Redmine
       end
       
       class Revision
-        attr_accessor :identifier, :scmid, :name, :author, :time, :message, :paths, :revision, :branch
+        attr_accessor :scmid, :name, :author, :time, :message, :paths, :revision, :branch
+        attr_writer :identifier
 
         def initialize(attributes={})
           self.identifier = attributes[:identifier]
@@ -283,6 +296,16 @@ module Redmine
           self.paths = attributes[:paths]
           self.revision = attributes[:revision]
           self.branch = attributes[:branch]
+        end
+
+        # Returns the identifier of this revision; see also Changeset model
+        def identifier
+          (@identifier || revision).to_s
+        end
+
+        # Returns the readable identifier.
+        def format_identifier
+          identifier
         end
 
         def save(repo)
@@ -306,7 +329,7 @@ module Redmine
           end
         end
       end
-        
+
       class Annotate
         attr_reader :lines, :revisions
         

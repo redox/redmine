@@ -18,7 +18,8 @@
 require "digest/sha1"
 
 class User < Principal
-
+  include Redmine::SafeAttributes
+  
   # Account statuses
   STATUS_ANONYMOUS  = 0
   STATUS_ACTIVE     = 1
@@ -34,21 +35,21 @@ class User < Principal
   }
 
   MAIL_NOTIFICATION_OPTIONS = [
-                               [:all, :label_user_mail_option_all],
-                               [:selected, :label_user_mail_option_selected],
-                               [:none, :label_user_mail_option_none],
-                               [:only_my_events, :label_user_mail_option_only_my_events],
-                               [:only_assigned, :label_user_mail_option_only_assigned],
-                               [:only_owner, :label_user_mail_option_only_owner]
-                              ]
+    ['all', :label_user_mail_option_all],
+    ['selected', :label_user_mail_option_selected],
+    ['only_my_events', :label_user_mail_option_only_my_events],
+    ['only_assigned', :label_user_mail_option_only_assigned],
+    ['only_owner', :label_user_mail_option_only_owner],
+    ['none', :label_user_mail_option_none]
+  ]
 
   has_and_belongs_to_many :groups, :after_add => Proc.new {|user, group| group.user_added(user)},
                                    :after_remove => Proc.new {|user, group| group.user_removed(user)}
   has_many :issue_categories, :foreign_key => 'assigned_to_id', :dependent => :nullify
   has_many :changesets, :dependent => :nullify
   has_one :preference, :dependent => :destroy, :class_name => 'UserPreference'
-  has_one :rss_token, :dependent => :destroy, :class_name => 'Token', :conditions => "action='feeds'"
-  has_one :api_token, :dependent => :destroy, :class_name => 'Token', :conditions => "action='api'"
+  has_one :rss_token, :class_name => 'Token', :conditions => "action='feeds'"
+  has_one :api_token, :class_name => 'Token', :conditions => "action='api'"
   belongs_to :auth_source
   
   # Active non-anonymous users scope
@@ -59,7 +60,7 @@ class User < Principal
   attr_accessor :password, :password_confirmation
   attr_accessor :last_before_login_on
   # Prevents unauthorized assignments
-  attr_protected :login, :admin, :password, :password_confirmation, :hashed_password, :group_ids
+  attr_protected :login, :admin, :password, :password_confirmation, :hashed_password
 	
   validates_presence_of :login, :firstname, :lastname, :mail, :if => Proc.new { |user| !user.is_a?(AnonymousUser) }
   validates_uniqueness_of :login, :if => Proc.new { |user| !user.login.blank? }, :case_sensitive => false
@@ -67,15 +68,21 @@ class User < Principal
   # Login must contain lettres, numbers, underscores only
   validates_format_of :login, :with => /^[a-z0-9_\-@\.]*$/i
   validates_length_of :login, :maximum => 30
-  validates_format_of :firstname, :lastname, :with => /^[\w\s\'\-\.]*$/i
   validates_length_of :firstname, :lastname, :maximum => 30
   validates_format_of :mail, :with => /^([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})$/i, :allow_nil => true
   validates_length_of :mail, :maximum => 60, :allow_nil => true
   validates_confirmation_of :password, :allow_nil => true
   validate :validate_password_length
+  validates_inclusion_of :mail_notification, :in => MAIL_NOTIFICATION_OPTIONS.collect(&:first), :allow_blank => true
 
   before_save :update_hashed_password
   before_create :set_mail_notification
+  before_destroy :remove_references_before_destroy
+  
+  def set_mail_notification
+    self.mail_notification = Setting.default_notification_option if self.mail_notification.blank?
+    true
+  end
   
   def reload(*args)
     @name = nil
@@ -253,12 +260,16 @@ class User < Principal
     notified_projects_ids
   end
 
-  # Only users that belong to more than 1 project can select projects for which they are notified
   def valid_notification_options
+    self.class.valid_notification_options(self)
+  end
+
+  # Only users that belong to more than 1 project can select projects for which they are notified
+  def self.valid_notification_options(user=nil)
     # Note that @user.membership.size would fail since AR ignores
     # :include association option when doing a count
-    if memberships.length < 1
-      MAIL_NOTIFICATION_OPTIONS.delete_if {|option| option.first == :selected}
+    if user.nil? || user.memberships.length < 1
+      MAIL_NOTIFICATION_OPTIONS.reject {|option| option.first == 'selected'}
     else
       MAIL_NOTIFICATION_OPTIONS
     end
@@ -384,32 +395,54 @@ class User < Principal
   def allowed_to_globally?(action, options)
     allowed_to?(action, nil, options.reverse_merge(:global => true))
   end
+
+  safe_attributes 'login',
+    'firstname',
+    'lastname',
+    'mail',
+    'mail_notification',
+    'language',
+    'custom_field_values',
+    'custom_fields',
+    'identity_url'
+  
+  safe_attributes 'status',
+    'auth_source_id',
+    :if => lambda {|user, current_user| current_user.admin?}
+  
+  safe_attributes 'group_ids',
+    :if => lambda {|user, current_user| current_user.admin? && !user.new_record?}
   
   # Utility method to help check if a user should be notified about an
   # event.
   #
   # TODO: only supports Issue events currently
   def notify_about?(object)
-    case mail_notification.to_sym
-    when :all
+    case mail_notification
+    when 'all'
       true
-    when :selected
-      # Handled by the Project
-    when :none
-      false
-    when :only_my_events
+    when 'selected'
+      # user receives notifications for created/assigned issues on unselected projects
       if object.is_a?(Issue) && (object.author == self || object.assigned_to == self)
         true
       else
         false
       end
-    when :only_assigned
+    when 'none'
+      false
+    when 'only_my_events'
+      if object.is_a?(Issue) && (object.author == self || object.assigned_to == self)
+        true
+      else
+        false
+      end
+    when 'only_assigned'
       if object.is_a?(Issue) && object.assigned_to == self
         true
       else
         false
       end
-    when :only_owner
+    when 'only_owner'
       if object.is_a?(Issue) && object.author == self
         true
       else
@@ -449,6 +482,31 @@ class User < Principal
   end
   
   private
+  
+  # Removes references that are not handled by associations
+  # Things that are not deleted are reassociated with the anonymous user
+  def remove_references_before_destroy
+    return if self.id.nil?
+    
+    substitute = User.anonymous
+    Attachment.update_all ['author_id = ?', substitute.id], ['author_id = ?', id]
+    Comment.update_all ['author_id = ?', substitute.id], ['author_id = ?', id]
+    Issue.update_all ['author_id = ?', substitute.id], ['author_id = ?', id]
+    Issue.update_all 'assigned_to_id = NULL', ['assigned_to_id = ?', id]
+    Journal.update_all ['user_id = ?', substitute.id], ['user_id = ?', id]
+    JournalDetail.update_all ['old_value = ?', substitute.id.to_s], ["property = 'attr' AND prop_key = 'assigned_to_id' AND old_value = ?", id.to_s]
+    JournalDetail.update_all ['value = ?', substitute.id.to_s], ["property = 'attr' AND prop_key = 'assigned_to_id' AND value = ?", id.to_s]
+    Message.update_all ['author_id = ?', substitute.id], ['author_id = ?', id]
+    News.update_all ['author_id = ?', substitute.id], ['author_id = ?', id]
+    # Remove private queries and keep public ones
+    Query.delete_all ['user_id = ? AND is_public = ?', id, false]
+    Query.update_all ['user_id = ?', substitute.id], ['user_id = ?', id]
+    TimeEntry.update_all ['user_id = ?', substitute.id], ['user_id = ?', id]
+    Token.delete_all ['user_id = ?', id]
+    Watcher.delete_all ['user_id = ?', id]
+    WikiContent.update_all ['author_id = ?', substitute.id], ['author_id = ?', id]
+    WikiContent::Version.update_all ['author_id = ?', substitute.id], ['author_id = ?', id]
+  end
     
   # Return password digest
   def self.hash_password(clear_password)
@@ -458,11 +516,6 @@ class User < Principal
   def update_hashed_password
     # update hashed_password if password was set
     self.hashed_password = User.hash_password(self.password) if self.password && self.auth_source_id.blank?
-  end
-  
-  def set_mail_notification
-    self.mail_notification = Setting.default_notification_option if self.mail_notification.blank?
-    true
   end
 end
 
@@ -486,5 +539,10 @@ class AnonymousUser < User
   def ensure_single_anonymous_user
     # There should be only one AnonymousUser in the database
     errors.add_to_base 'An anonymous user already exists.' if AnonymousUser.find(:first)
+  end
+  
+  # Anonymous user can not be destroyed
+  def destroy
+    false
   end
 end

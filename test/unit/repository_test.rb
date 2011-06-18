@@ -15,18 +15,23 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-require File.dirname(__FILE__) + '/../test_helper'
+require File.expand_path('../../test_helper', __FILE__)
 
 class RepositoryTest < ActiveSupport::TestCase
   fixtures :projects,
            :trackers,
            :projects_trackers,
+           :enabled_modules,
            :repositories,
            :issues,
            :issue_statuses,
+           :issue_categories,
            :changesets,
            :changes,
            :users,
+           :members,
+           :member_roles,
+           :roles,
            :enumerations
   
   def setup
@@ -57,12 +62,11 @@ class RepositoryTest < ActiveSupport::TestCase
   
   def test_should_not_create_with_disabled_scm
     # disable Subversion
-    Setting.enabled_scm = ['Darcs', 'Git']
-    repository = Repository::Subversion.new(:project => Project.find(3), :url => "svn://localhost")
-    assert !repository.save
-    assert_equal I18n.translate('activerecord.errors.messages.invalid'), repository.errors.on(:type)
-    # re-enable Subversion for following tests
-    Setting.delete_all
+    with_settings :enabled_scm => ['Darcs', 'Git'] do
+      repository = Repository::Subversion.new(:project => Project.find(3), :url => "svn://localhost")
+      assert !repository.save
+      assert_equal I18n.translate('activerecord.errors.messages.invalid'), repository.errors.on(:type)
+    end
   end
   
   def test_scan_changesets_for_issue_ids

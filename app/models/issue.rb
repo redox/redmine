@@ -16,6 +16,8 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 class Issue < ActiveRecord::Base
+  include Redmine::SafeAttributes
+  
   belongs_to :project
   belongs_to :tracker
   belongs_to :status, :class_name => 'IssueStatus', :foreign_key => 'status_id'
@@ -32,7 +34,7 @@ class Issue < ActiveRecord::Base
   has_many :relations_from, :class_name => 'IssueRelation', :foreign_key => 'issue_from_id', :dependent => :delete_all
   has_many :relations_to, :class_name => 'IssueRelation', :foreign_key => 'issue_to_id', :dependent => :delete_all
   
-  acts_as_nested_set :scope => 'root_id'
+  acts_as_nested_set :scope => 'root_id', :dependent => :destroy
   acts_as_attachable :after_remove => :attachment_removed
   acts_as_customizable
   acts_as_watchable
@@ -90,8 +92,7 @@ class Issue < ActiveRecord::Base
   after_save :reschedule_following_issues, 
              :update_nested_set_attributes, :update_parent_attributes,
              :create_journal, :update_tracker_and_parent
-  after_destroy :destroy_children, :update_parent_attributes
-  after_initialize :set_default_values
+  after_destroy :update_parent_attributes
   
   # Returns true if usr or current user is allowed to view the issue
   def visible?(usr=nil)
@@ -209,30 +210,29 @@ class Issue < ActiveRecord::Base
     write_attribute :estimated_hours, (h.is_a?(String) ? h.to_hours : h)
   end
   
-  SAFE_ATTRIBUTES = %w(
-    tracker_id
-    status_id
-    parent_issue_id
-    category_id
-    assigned_to_id
-    priority_id
-    fixed_version_id
-    subject
-    description
-    start_date
-    due_date
-    done_ratio
-    estimated_hours
-    custom_field_values
-    lock_version
-  ) unless const_defined?(:SAFE_ATTRIBUTES)
+  safe_attributes 'tracker_id',
+    'status_id',
+    'parent_issue_id',
+    'category_id',
+    'assigned_to_id',
+    'priority_id',
+    'fixed_version_id',
+    'subject',
+    'description',
+    'start_date',
+    'due_date',
+    'done_ratio',
+    'estimated_hours',
+    'custom_field_values',
+    'custom_fields',
+    'lock_version',
+    :if => lambda {|issue, user| issue.new_record? || user.allowed_to?(:edit_issues, issue.project) }
   
-  SAFE_ATTRIBUTES_ON_TRANSITION = %w(
-    status_id
-    assigned_to_id
-    fixed_version_id
-    done_ratio
-  ) unless const_defined?(:SAFE_ATTRIBUTES_ON_TRANSITION)
+  safe_attributes 'status_id',
+    'assigned_to_id',
+    'fixed_version_id',
+    'done_ratio',
+    :if => lambda {|issue, user| issue.new_statuses_allowed_to(user).any? }
 
   # Safely sets attributes
   # Should be called from controllers instead of #attributes=
@@ -243,13 +243,8 @@ class Issue < ActiveRecord::Base
     return unless attrs.is_a?(Hash)
     
     # User can change issue attributes only if he has :edit permission or if a workflow transition is allowed
-    if new_record? || user.allowed_to?(:edit_issues, project)
-      attrs = attrs.reject {|k,v| !SAFE_ATTRIBUTES.include?(k)}
-    elsif new_statuses_allowed_to(user).any?
-      attrs = attrs.reject {|k,v| !SAFE_ATTRIBUTES_ON_TRANSITION.include?(k)}
-    else
-      return
-    end
+    attrs = delete_unsafe_attributes(attrs, user)
+    return if attrs.empty? 
     
     # Tracker must be set before since new_statuses_allowed_to depends on it.
     if t = attrs.delete('tracker_id')
@@ -381,7 +376,12 @@ class Issue < ActiveRecord::Base
   
   # Returns an array of status that user is able to apply
   def new_statuses_allowed_to(user, include_default=false)
-    statuses = status.find_new_statuses_allowed_to(user.roles_for_project(project), tracker)
+    statuses = status.find_new_statuses_allowed_to(
+      user.roles_for_project(project),
+      tracker,
+      author == user,
+      assigned_to_id_changed? ? assigned_to_id_was == user.id : assigned_to_id == user.id
+      )
     statuses << status unless statuses.empty?
     statuses << IssueStatus.default if include_default
     statuses = statuses.uniq.sort
@@ -414,11 +414,14 @@ class Issue < ActiveRecord::Base
     (relations_from + relations_to).sort
   end
   
-  def all_dependent_issues
+  def all_dependent_issues(except=nil)
+    except ||= self
     dependencies = []
     relations_from.each do |relation|
-      dependencies << relation.issue_to
-      dependencies += relation.issue_to.all_dependent_issues
+      if relation.issue_to && relation.issue_to != except
+        dependencies << relation.issue_to
+        dependencies += relation.issue_to.all_dependent_issues(except)
+      end
     end
     dependencies
   end
@@ -710,14 +713,6 @@ class Issue < ActiveRecord::Base
       
       # ancestors will be recursively updated
       p.save(false)
-    end
-  end
-  
-  def destroy_children
-    unless leaf?
-      children.each do |child|
-        child.destroy
-      end
     end
   end
   

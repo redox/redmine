@@ -1,5 +1,8 @@
 .bundle
 Gemfile.lock
+
+/.project
+/.loadpath
 /config/additional_environment.rb
 /config/configuration.yml
 /config/database.yml

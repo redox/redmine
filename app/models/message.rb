@@ -44,6 +44,9 @@ class Message < ActiveRecord::Base
   after_update :update_messages_board
   after_destroy :reset_board_counters
   
+  named_scope :visible, lambda {|*args| { :include => {:board => :project},
+                                          :conditions => Project.allowed_to_condition(args.first || User.current, :view_messages) } }
+  
   def visible?(user=User.current)
     !user.nil? && user.allowed_to?(:view_messages, project)
   end

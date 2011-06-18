@@ -39,6 +39,10 @@ class Repository < ActiveRecord::Base
     write_attribute(:root_url, arg ? arg.to_s.strip : nil)
   end
 
+  def scm_adapter
+    self.class.scm_adapter_class
+  end
+
   def scm
     @scm ||= self.scm_adapter.new url, root_url, login, password
     update_attribute(:root_url, @scm.root_url) if root_url.blank?
@@ -48,7 +52,7 @@ class Repository < ActiveRecord::Base
   def scm_name
     self.class.scm_name
   end
-  
+
   def supports_cat?
     scm.supports_cat?
   end
@@ -88,17 +92,25 @@ class Repository < ActiveRecord::Base
   def diff(path, rev, rev_to)
     scm.diff(path, rev, rev_to)
   end
-  
+
+  def diff_format_revisions(cs, cs_to, sep=':')
+    text = ""
+    text << cs_to.format_identifier + sep if cs_to
+    text << cs.format_identifier if cs
+    text
+  end
+
   # Returns a path relative to the url of the repository
   def relative_path(path)
     path
   end
-  
+
   # Finds and returns a revision with a number or the beginning of a hash
   def find_changeset_by_name(name)
+    return nil if name.blank?
     changesets.find(:first, :conditions => (name.match(/^\d*$/) ? ["revision = ?", name.to_s] : ["revision LIKE ?", name + '%']))
   end
-  
+
   def latest_changeset
     @latest_changeset ||= changesets.find(:first)
   end
@@ -167,18 +179,22 @@ class Repository < ActiveRecord::Base
       user
     end
   end
-  
+
   # Fetches new changesets for all repositories of active projects
   # Can be called periodically by an external script
   # eg. ruby script/runner "Repository.fetch_changesets"
   def self.fetch_changesets
     Project.active.has_module(:repository).find(:all, :include => :repository).each do |project|
       if project.repository
-        project.repository.fetch_changesets
+        begin
+          project.repository.fetch_changesets
+        rescue Redmine::Scm::Adapters::CommandFailed => e
+          logger.error "scm: error during fetching changesets: #{e.message}"
+        end
       end
     end
   end
-  
+
   # scan changeset comments to find related and fixed issues for all repositories
   def self.scan_changesets_for_issue_ids
     find(:all).each(&:scan_changesets_for_issue_ids)
@@ -198,7 +214,41 @@ class Repository < ActiveRecord::Base
   rescue
     nil
   end
-  
+
+  def self.scm_adapter_class
+    nil
+  end
+
+  def self.scm_command
+    ret = ""
+    begin
+      ret = self.scm_adapter_class.client_command if self.scm_adapter_class
+    rescue Redmine::Scm::Adapters::CommandFailed => e
+      logger.error "scm: error during get command: #{e.message}"
+    end
+    ret
+  end
+
+  def self.scm_version_string
+    ret = ""
+    begin
+      ret = self.scm_adapter_class.client_version_string if self.scm_adapter_class
+    rescue Redmine::Scm::Adapters::CommandFailed => e
+      logger.error "scm: error during get version string: #{e.message}"
+    end
+    ret
+  end
+
+  def self.scm_available
+    ret = false
+    begin
+      ret = self.scm_adapter_class.client_available if self.scm_adapter_class 
+    rescue Redmine::Scm::Adapters::CommandFailed => e
+      logger.error "scm: error during get scm available: #{e.message}"
+    end
+    ret
+  end
+
   private
   
   def clear_changesets
