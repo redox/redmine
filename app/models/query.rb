@@ -1,5 +1,5 @@
 # Redmine - project management software
-# Copyright (C) 2006-2008  Jean-Philippe Lang
+# Copyright (C) 2006-2011  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -42,6 +42,10 @@ class QueryColumn
   def value(issue)
     issue.send name
   end
+  
+  def css_classes
+    name
+  end
 end
 
 class QueryCustomFieldColumn < QueryColumn
@@ -67,6 +71,10 @@ class QueryCustomFieldColumn < QueryColumn
   def value(issue)
     cv = issue.custom_values.detect {|v| v.custom_field_id == @cf.id}
     cv && @cf.cast_value(cv.value)
+  end
+  
+  def css_classes
+    @css_classes ||= "#{name} #{@cf.field_format}"
   end
 end
 
@@ -216,14 +224,19 @@ class Query < ActiveRecord::Base
   
     if project
       # project specific filters
-      unless @project.issue_categories.empty?
-        @available_filters["category_id"] = { :type => :list_optional, :order => 6, :values => @project.issue_categories.collect{|s| [s.name, s.id.to_s] } }
+      categories = @project.issue_categories.all
+      unless categories.empty?
+        @available_filters["category_id"] = { :type => :list_optional, :order => 6, :values => categories.collect{|s| [s.name, s.id.to_s] } }
       end
-      unless @project.shared_versions.empty?
-        @available_filters["fixed_version_id"] = { :type => :list_optional, :order => 7, :values => @project.shared_versions.sort.collect{|s| ["#{s.project.name} - #{s.name}", s.id.to_s] } }
+      versions = @project.shared_versions.all
+      unless versions.empty?
+        @available_filters["fixed_version_id"] = { :type => :list_optional, :order => 7, :values => versions.sort.collect{|s| ["#{s.project.name} - #{s.name}", s.id.to_s] } }
       end
-      unless @project.descendants.active.empty?
-        @available_filters["subproject_id"] = { :type => :list_subprojects, :order => 13, :values => @project.descendants.visible.collect{|s| [s.name, s.id.to_s] } }
+      unless @project.leaf?
+        subprojects = @project.descendants.visible.all
+        unless subprojects.empty?
+          @available_filters["subproject_id"] = { :type => :list_subprojects, :order => 13, :values => subprojects.collect{|s| [s.name, s.id.to_s] } }
+        end
       end
       add_custom_fields_filters(@project.all_issue_custom_fields)
     else
@@ -412,8 +425,7 @@ class Query < ActiveRecord::Base
     elsif project
       project_clauses << "#{Project.table_name}.id = %d" % project.id
     end
-    project_clauses <<  Project.allowed_to_condition(User.current, :view_issues)
-    project_clauses.join(' AND ')
+    project_clauses.any? ? project_clauses.join(' AND ') : nil
   end
 
   def statement
@@ -494,7 +506,10 @@ class Query < ActiveRecord::Base
       
     end if filters and valid?
     
-    (filters_clauses << project_statement).join(' AND ')
+    filters_clauses << project_statement
+    filters_clauses.reject!(&:blank?)
+    
+    filters_clauses.any? ? filters_clauses.join(' AND ') : nil
   end
   
   # Returns the issue count
@@ -510,7 +525,7 @@ class Query < ActiveRecord::Base
     if grouped?
       begin
         # Rails will raise an (unexpected) RecordNotFound if there's only a nil group value
-        r = Issue.count(:group => group_by_statement, :include => [:status, :project], :conditions => statement)
+        r = Issue.visible.count(:group => group_by_statement, :include => [:status, :project], :conditions => statement)
       rescue ActiveRecord::RecordNotFound
         r = {nil => issue_count}
       end
@@ -531,7 +546,7 @@ class Query < ActiveRecord::Base
     order_option = nil if order_option.blank?
     
     Issue.find :all, :include => ([:status, :project] + (options[:include] || [])).uniq,
-                     :conditions => merge_conditions(statement, options[:conditions]),
+                     :conditions => Query.merge_conditions(statement, options[:conditions]),
                      :order => order_option,
                      :limit  => options[:limit],
                      :offset => options[:offset]
@@ -542,7 +557,7 @@ class Query < ActiveRecord::Base
   # Returns the journals
   # Valid options are :order, :offset, :limit
   def journals(options={})
-    Journal.find :all, :include => [:details, :user, {:issue => [:project, :author, :tracker, :status]}],
+    Journal.visible.find :all, :include => [:details, :user, {:issue => [:project, :author, :tracker, :status]}],
                        :conditions => statement,
                        :order => options[:order],
                        :limit => options[:limit],
@@ -555,7 +570,7 @@ class Query < ActiveRecord::Base
   # Valid options are :conditions
   def versions(options={})
     Version.find :all, :include => :project,
-                       :conditions => merge_conditions(project_statement, options[:conditions])
+                       :conditions => Query.merge_conditions(project_statement, options[:conditions])
   rescue ::ActiveRecord::StatementInvalid => e
     raise StatementInvalid.new(e.message)
   end
@@ -609,12 +624,10 @@ class Query < ActiveRecord::Base
     when "t"
       sql = date_range_clause(db_table, db_field, 0, 0)
     when "w"
-      from = l(:general_first_day_of_week) == '7' ?
-      # week starts on sunday
-      ((Date.today.cwday == 7) ? Time.now.at_beginning_of_day : Time.now.at_beginning_of_week - 1.day) :
-        # week starts on monday (Rails default)
-        Time.now.at_beginning_of_week
-      sql = "#{db_table}.#{db_field} BETWEEN '%s' AND '%s'" % [connection.quoted_date(from), connection.quoted_date(from + 7.days)]
+      first_day_of_week = l(:general_first_day_of_week).to_i
+      day_of_week = Date.today.cwday
+      days_ago = (day_of_week >= first_day_of_week ? day_of_week - first_day_of_week : day_of_week + 7 - first_day_of_week)
+      sql = date_range_clause(db_table, db_field, - days_ago, - days_ago + 6)
     when "~"
       sql = "LOWER(#{db_table}.#{db_field}) LIKE '%#{connection.quote_string(value.first.to_s.downcase)}%'"
     when "!~"
@@ -637,6 +650,9 @@ class Query < ActiveRecord::Base
         options = { :type => :date, :order => 20 }
       when "bool"
         options = { :type => :list, :values => [[l(:general_text_yes), "1"], [l(:general_text_no), "0"]], :order => 20 }
+      when "user", "version"
+        next unless project
+        options = { :type => :list_optional, :values => field.possible_values_options(project), :order => 20}
       else
         options = { :type => :string, :order => 20 }
       end

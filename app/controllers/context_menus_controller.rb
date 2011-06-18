@@ -1,5 +1,6 @@
 class ContextMenusController < ApplicationController
   helper :watchers
+  helper :issues
   
   def issues
     @issues = Issue.visible.all(:conditions => {:id => params[:ids]}, :include => :project)
@@ -34,11 +35,24 @@ class ContextMenusController < ApplicationController
       @trackers = @projects.map(&:trackers).inject{|memo,t| memo & t}
     end
     
-    @priorities = IssuePriority.all.reverse
+    @priorities = IssuePriority.active.reverse
     @statuses = IssueStatus.find(:all, :order => 'position')
     @back = back_url
     
     render :layout => false
   end
-  
+
+  def time_entries
+    @time_entries = TimeEntry.all(
+       :conditions => {:id => params[:ids]}, :include => :project)
+    @projects = @time_entries.collect(&:project).compact.uniq
+    @project = @projects.first if @projects.size == 1
+    @activities = TimeEntryActivity.shared.active
+    @can = {:edit   => User.current.allowed_to?(:log_time, @projects),
+            :update => User.current.allowed_to?(:log_time, @projects),
+            :delete => User.current.allowed_to?(:log_time, @projects)
+            }
+    @back = back_url
+    render :layout => false
+  end  
 end

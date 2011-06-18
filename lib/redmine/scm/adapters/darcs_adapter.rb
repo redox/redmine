@@ -1,16 +1,16 @@
-# redMine - project management software
-# Copyright (C) 2006-2007  Jean-Philippe Lang
+# Redmine - project management software
+# Copyright (C) 2006-2011  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; either version 2
 # of the License, or (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
@@ -43,7 +43,10 @@ module Redmine
           end
 
           def darcs_binary_version
-            darcsversion = darcs_binary_version_from_command_line
+            darcsversion = darcs_binary_version_from_command_line.dup
+            if darcsversion.respond_to?(:force_encoding)
+              darcsversion.force_encoding('ASCII-8BIT')
+            end
             if m = darcsversion.match(%r{\A(.*?)((\d+\.)+\d+)})
               m[2].scan(%r{\d+}).collect(&:to_i)
             end
@@ -54,7 +57,8 @@ module Redmine
           end
         end
 
-        def initialize(url, root_url=nil, login=nil, password=nil)
+        def initialize(url, root_url=nil, login=nil, password=nil,
+                       path_encoding=nil)
           @url = url
           @root_url = url
         end
@@ -72,7 +76,7 @@ module Redmine
 
         # Returns an Entries collection
         # or nil if the given path doesn't exist in the repository
-        def entries(path=nil, identifier=nil)
+        def entries(path=nil, identifier=nil, options={})
           path_prefix = (path.blank? ? '' : "#{path}/")
           if path.blank?
             path = ( self.class.client_version_above?([2, 2, 0]) ? @url : '.' )

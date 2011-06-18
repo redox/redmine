@@ -32,7 +32,7 @@
 
 <p>
   <label><%= l(:field_priority) %></label>
-  <%= select_tag('priority_id', "<option value=\"\">#{l(:label_no_change_option)}</option>" + options_from_collection_for_select(IssuePriority.all, :id, :name)) %>
+  <%= select_tag('priority_id', "<option value=\"\">#{l(:label_no_change_option)}</option>" + options_from_collection_for_select(IssuePriority.active, :id, :name)) %>
 </p>
 
 <p>
@@ -73,4 +73,7 @@
 	<%= submit_tag l(:button_move) %>
 	<%= submit_tag l(:button_move_and_follow), :name => 'follow' %>
 <% end %>
+<% end %>
+<% content_for :header_tags do %>
+	<%= robot_exclusion_tag %>
 <% end %>
