@@ -19,13 +19,9 @@ class Token < ActiveRecord::Base
   belongs_to :user
   validates_uniqueness_of :value
   
-  before_create :delete_previous_tokens
+  before_create :delete_previous_tokens, :generate_new_token
   
   @@validity_time = 1.day
-  
-  def before_create
-    self.value = Token.generate_token_value
-  end
 
   # Return true if token has expired  
   def expired?
@@ -47,5 +43,9 @@ private
     if user
       Token.delete_all(['user_id = ? AND action = ?', user.id, action])
     end
+  end
+
+  def generate_new_token
+    self.value = Token.generate_token_value
   end
 end

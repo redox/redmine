@@ -24,7 +24,9 @@ class Member < ActiveRecord::Base
 
   validates_presence_of :principal, :project
   validates_uniqueness_of :user_id, :scope => :project_id
+  validate :validate_role
 
+  before_destroy :remove_category
   after_destroy :unwatch_from_permission_change
   
   def name
@@ -64,13 +66,6 @@ class Member < ActiveRecord::Base
       self.user == user
     end
   end
-  
-  def before_destroy
-    if user
-      # remove category based auto assignments for this member
-      IssueCategory.update_all "assigned_to_id = NULL", ["project_id = ? AND assigned_to_id = ?", project.id, user.id]
-    end
-  end
 
   # Find or initilize a Member with an id, attributes, and for a Principal
   def self.edit_membership(id, new_attributes, principal=nil)
@@ -80,17 +75,24 @@ class Member < ActiveRecord::Base
   end
   
   protected
-  
-  def validate
+
+  def validate_role
     errors.add_on_empty :role if member_roles.empty? && roles.empty?
   end
-  
+
   private
   
   # Unwatch things that the user is no longer allowed to view inside project
   def unwatch_from_permission_change
     if user
       Watcher.prune(:user => user, :project => project)
+    end
+  end
+  
+  def remove_category
+    if user
+      # remove category based auto assignments for this member
+      IssueCategory.update_all "assigned_to_id = NULL", ["project_id = ? AND assigned_to_id = ?", project.id, user.id]
     end
   end
 end

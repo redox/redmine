@@ -21,12 +21,10 @@ class UserPreference < ActiveRecord::Base
   
   attr_protected :others
   
+  before_save :reset
+  
   def initialize(attributes = nil)
     super
-    self.others ||= {}
-  end
-  
-  def before_save
     self.others ||= {}
   end
   
@@ -51,7 +49,13 @@ class UserPreference < ActiveRecord::Base
   
   def comments_sorting; self[:comments_sorting] end
   def comments_sorting=(order); self[:comments_sorting]=order end
-  
+
   def warn_on_leaving_unsaved; self[:warn_on_leaving_unsaved] || '1'; end
   def warn_on_leaving_unsaved=(value); self[:warn_on_leaving_unsaved]=value; end
+  
+  private
+  
+  def reset
+    self.others ||= {}
+  end
 end
