@@ -7,7 +7,7 @@ source :gemcutter
 # gem 'rails', '2.3.4'
 # gem 'rails', '2.3.11'
 # gem 'rails', '3.0.6'
-gem 'rails', '3.0.9'
+gem 'rails', '3.1.0.rc4'
 
 gem 'rubytree', '0.7.0'
 # gem 'rack' , '~> 1.1.1'
