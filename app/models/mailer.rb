@@ -23,9 +23,10 @@ class Mailer < ActionMailer::Base
   helper :issues
   helper :custom_fields
 
+  # include ActionController::UrlWriter
   include ActionDispatch::Routing::UrlFor
   include Redmine::I18n
-  
+
   self.prepend_view_path "app/views/mailer"
 
   def self.default_url_options

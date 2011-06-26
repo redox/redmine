@@ -53,7 +53,7 @@ class User < Principal
   belongs_to :auth_source
   
   # Active non-anonymous users scope
-  named_scope :active, :conditions => "#{User.table_name}.status = #{STATUS_ACTIVE}"
+  scope :active, :conditions => "#{User.table_name}.status = #{STATUS_ACTIVE}"
   
   acts_as_customizable
   
@@ -79,11 +79,11 @@ class User < Principal
   before_create :set_mail_notification
   before_destroy :remove_references_before_destroy
   
-  named_scope :in_group, lambda {|group|
+  scope :in_group, lambda {|group|
     group_id = group.is_a?(Group) ? group.id : group.to_i
     { :conditions => ["#{User.table_name}.id IN (SELECT gu.user_id FROM #{table_name_prefix}groups_users#{table_name_suffix} gu WHERE gu.group_id = ?)", group_id] }
   }
-  named_scope :not_in_group, lambda {|group|
+  scope :not_in_group, lambda {|group|
     group_id = group.is_a?(Group) ? group.id : group.to_i
     { :conditions => ["#{User.table_name}.id NOT IN (SELECT gu.user_id FROM #{table_name_prefix}groups_users#{table_name_suffix} gu WHERE gu.group_id = ?)", group_id] }
   }
@@ -584,6 +584,11 @@ end
 
 class AnonymousUser < User
   before_validation :ensure_single_anonymous_user, :on => :create
+
+  def ensure_single_anonymous_user
+    # There should be only one AnonymousUser in the database
+    errors.add_to_base 'An anonymous user already exists.' if AnonymousUser.find(:first)
+  end
   
   def available_custom_fields
     []
@@ -596,13 +601,6 @@ class AnonymousUser < User
   def mail; nil end
   def time_zone; nil end
   def rss_key; nil end
-
-  private
-
-  def ensure_single_anonymous_user
-    # There should be only one AnonymousUser in the database
-    errors.add_to_base 'An anonymous user already exists.' if AnonymousUser.find(:first)
-  end
   
   # Anonymous user can not be destroyed
   def destroy

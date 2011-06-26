@@ -1,8 +1,5 @@
 syntax: glob
 
-.svn/
-.git/
-
 .project
 .loadpath
 config/additional_environment.rb
@@ -28,6 +25,9 @@ tmp/sockets/*
 tmp/test/*
 vendor/rails
 *.rbc
+
+.svn/
+.git/
 
 .bundle
 Gemfile.lock

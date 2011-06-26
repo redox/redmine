@@ -4,9 +4,10 @@ source :rubyforge
 source :gemcutter
 
 # gem 'bundler', '~> 1.0.0'
-# gem 'rails', '2.3.11'
 # gem 'rails', '2.3.4'
-gem 'rails', '3.0.6'
+# gem 'rails', '2.3.11'
+# gem 'rails', '3.0.6'
+gem 'rails', '3.0.9'
 
 gem 'rubytree', '0.7.0'
 # gem 'rack' , '~> 1.1.1'
@@ -16,7 +17,8 @@ gem 'rubytree', '0.7.0'
 # gem 'rubytree', '0.5.2', :require => 'tree'
 gem 'coderay', '~> 0.9.7'
 
-gem 'ruby-prof', :git => 'http://github.com/wycats/ruby-prof.git'
+# gem 'ruby-prof', :git => 'http://github.com/wycats/ruby-prof.git'
+gem 'ruby-prof'
 gem 'jquery-rails'
 
 group :development do
@@ -27,7 +29,8 @@ end
 
 group :test do
   gem 'test-unit'
-  gem 'shoulda', '~> 2.10.3'
+  # gem 'shoulda', '~> 2.10.3'
+  gem 'shoulda'
   gem 'mocha'
   gem 'edavis10-object_daddy', :require => 'object_daddy'
 end
@@ -62,7 +65,8 @@ platforms :mri do
   end
 
   group :sqlite do
-    gem "sqlite3-ruby", "< 1.3", :require => "sqlite3"
+    # gem "sqlite3-ruby", "< 1.3", :require => "sqlite3"
+    gem "sqlite3-ruby"
     #   please tell me, if you are fond of a pure ruby sqlite3 binding
   end
 end
@@ -88,4 +92,3 @@ Dir.glob(File.join(File.dirname(__FILE__), %w(vendor plugins * Gemfile))) do |fi
   puts "Loading #{file} ..." if $DEBUG # `ruby -d` or `bundle -v`
   instance_eval File.read(file)
 end
-

@@ -17,7 +17,7 @@
 
 require 'test_helper'
 
-class Redmine::MenuManager::MenuHelperTest < HelperTestCase
+class Redmine::MenuManager::MenuHelperTest < ActionView::TestCase
   include Redmine::MenuManager::MenuHelper
   fixtures :users, :members, :projects, :enabled_modules
 
