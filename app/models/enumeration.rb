@@ -25,14 +25,15 @@ class Enumeration < ActiveRecord::Base
   acts_as_tree :order => 'position ASC'
 
   before_destroy :check_integrity
-  
+  before_save :check_default
+
   validates_presence_of :name
   validates_uniqueness_of :name, :scope => [:type, :project_id]
   validates_length_of :name, :maximum => 30
 
-  named_scope :shared, :conditions => { :project_id => nil }
-  named_scope :active, :conditions => { :active => true }
-  named_scope :named, lambda {|arg| { :conditions => ["LOWER(#{table_name}.name) = LOWER(?)", arg.to_s.strip]}}
+  scope :shared, :conditions => { :project_id => nil }
+  scope :active, :conditions => { :active => true }
+  scope :named, lambda {|arg| { :conditions => ["LOWER(#{table_name}.name) = LOWER(?)", arg.to_s.strip]}}
 
   def self.default
     # Creates a fake default scope so Enumeration.default will check
@@ -45,18 +46,18 @@ class Enumeration < ActiveRecord::Base
       find(:first, :conditions => { :is_default => true })
     end
   end
-  
+
   # Overloaded on concrete classes
   def option_name
     nil
   end
 
-  def before_save
+  def check_default
     if is_default? && is_default_changed?
       Enumeration.update_all("is_default = #{connection.quoted_false}", {:type => type})
     end
   end
-  
+
   # Overloaded on concrete classes
   def objects_count
     0
@@ -122,11 +123,11 @@ class Enumeration < ActiveRecord::Base
     return new == previous
   end
   
-private
+  private
+  
   def check_integrity
     raise "Can't delete enumeration" if self.in_use?
   end
-
 end
 
 # Force load the subclasses in development mode

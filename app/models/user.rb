@@ -52,7 +52,7 @@ class User < Principal
   belongs_to :auth_source
   
   # Active non-anonymous users scope
-  named_scope :active, :conditions => "#{User.table_name}.status = #{STATUS_ACTIVE}"
+  scope :active, :conditions => "#{User.table_name}.status = #{STATUS_ACTIVE}"
   
   acts_as_customizable
   
@@ -71,31 +71,34 @@ class User < Principal
   validates_format_of :mail, :with => /^([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})$/i, :allow_blank => true
   validates_length_of :mail, :maximum => 60, :allow_nil => true
   validates_confirmation_of :password, :allow_nil => true
+  validate :validate_password_length
   validates_inclusion_of :mail_notification, :in => MAIL_NOTIFICATION_OPTIONS.collect(&:first), :allow_blank => true
 
+  before_save :update_hashed_password
+  before_create :set_mail_notification
   before_destroy :remove_references_before_destroy
   
-  named_scope :in_group, lambda {|group|
+  scope :in_group, lambda {|group|
     group_id = group.is_a?(Group) ? group.id : group.to_i
     { :conditions => ["#{User.table_name}.id IN (SELECT gu.user_id FROM #{table_name_prefix}groups_users#{table_name_suffix} gu WHERE gu.group_id = ?)", group_id] }
   }
-  named_scope :not_in_group, lambda {|group|
+  scope :not_in_group, lambda {|group|
     group_id = group.is_a?(Group) ? group.id : group.to_i
     { :conditions => ["#{User.table_name}.id NOT IN (SELECT gu.user_id FROM #{table_name_prefix}groups_users#{table_name_suffix} gu WHERE gu.group_id = ?)", group_id] }
   }
   
-  def before_create
+  def set_mail_notification
     self.mail_notification = Setting.default_notification_option if self.mail_notification.blank?
     true
   end
-  
-  def before_save
+
+  def update_hashed_password
     # update hashed_password if password was set
     if self.password && self.auth_source_id.blank?
       salt_password(password)
     end
   end
-  
+
   def reload(*args)
     @name = nil
     @projects_by_role = nil
@@ -544,7 +547,7 @@ class User < Principal
   
   protected
   
-  def validate
+  def validate_password_length
     # Password length validation based on setting
     if !password.nil? && password.size < Setting.password_min_length.to_i
       errors.add(:password, :too_short, :count => Setting.password_min_length.to_i)
@@ -587,14 +590,14 @@ class User < Principal
   def self.generate_salt
     ActiveSupport::SecureRandom.hex(16)
   end
-  
 end
 
 class AnonymousUser < User
-  
-  def validate_on_create
+  before_validation :ensure_single_anonymous_user, :on => :create
+
+  def ensure_single_anonymous_user
     # There should be only one AnonymousUser in the database
-    errors.add_to_base 'An anonymous user already exists.' if AnonymousUser.find(:first)
+    errors[:base] << 'An anonymous user already exists.' if AnonymousUser.find(:first)
   end
   
   def available_custom_fields

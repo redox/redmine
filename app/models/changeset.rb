@@ -41,9 +41,14 @@ class Changeset < ActiveRecord::Base
   validates_uniqueness_of :revision, :scope => :repository_id
   validates_uniqueness_of :scmid, :scope => :repository_id, :allow_nil => true
 
-  named_scope :visible, lambda {|*args| { :include => {:repository => :project},
+  # named_scope :visible,
+  scope :visible,
+     lambda {|*args| { :include => {:repository => :project},
                                           :conditions => Project.allowed_to_condition(args.shift || User.current, :view_changesets, *args) } }
 
+  after_create :scan_for_issues
+  before_create :set_committer
+                                        
   def revision=(r)
     write_attribute :revision, (r.nil? ? nil : r.to_s)
   end
@@ -294,5 +299,13 @@ class Changeset < ActiveRecord::Base
       str = txtar
     end
     str
+  end
+  
+  def scan_for_issues
+    scan_comment_for_issue_ids
+  end
+  
+  def set_committer
+    self.user = repository.find_committer_user(committer)
   end
 end

@@ -29,10 +29,12 @@ class Repository < ActiveRecord::Base
   # Raw SQL to delete changesets and changes in the database
   # has_many :changesets, :dependent => :destroy is too slow for big repositories
   before_destroy :clear_changesets
-
   validates_length_of :password, :maximum => 255, :allow_nil => true
+
   # Checks if the SCM is enabled when creating a repository
-  validate_on_create { |r| r.errors.add(:type, :invalid) unless Setting.enabled_scm.include?(r.class.name.demodulize) }
+  before_validation(:on => :create) {
+      |r| r.errors.add(:type, :invalid) unless Setting.enabled_scm.include?(r.class.name.demodulize)
+    }
 
   def self.human_attribute_name(attribute_key_name)
     attr_name = attribute_key_name
@@ -306,17 +308,17 @@ class Repository < ActiveRecord::Base
 
   private
 
-  def before_save
-    # Strips url and root_url
-    url.strip!
-    root_url.strip!
-    true
-  end
-
   def clear_changesets
     cs, ch, ci = Changeset.table_name, Change.table_name, "#{table_name_prefix}changesets_issues#{table_name_suffix}"
     connection.delete("DELETE FROM #{ch} WHERE #{ch}.changeset_id IN (SELECT #{cs}.id FROM #{cs} WHERE #{cs}.repository_id = #{id})")
     connection.delete("DELETE FROM #{ci} WHERE #{ci}.changeset_id IN (SELECT #{cs}.id FROM #{cs} WHERE #{cs}.repository_id = #{id})")
     connection.delete("DELETE FROM #{cs} WHERE #{cs}.repository_id = #{id}")
+  end
+  
+  def strip_urls
+    # Strips url and root_url
+    url.strip!
+    root_url.strip!
+    true
   end
 end

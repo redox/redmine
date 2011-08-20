@@ -33,9 +33,9 @@ class Version < ActiveRecord::Base
   validates_inclusion_of :status, :in => VERSION_STATUSES
   validates_inclusion_of :sharing, :in => VERSION_SHARINGS
 
-  named_scope :named, lambda {|arg| { :conditions => ["LOWER(#{table_name}.name) = LOWER(?)", arg.to_s.strip]}}
-  named_scope :open, :conditions => {:status => 'open'}
-  named_scope :visible, lambda {|*args| { :include => :project,
+  scope :named, lambda {|arg| { :conditions => ["LOWER(#{table_name}.name) = LOWER(?)", arg.to_s.strip]}}
+  scope :open, :conditions => {:status => 'open'}
+  scope :visible, lambda {|*args| { :include => :project,
                                           :conditions => Project.allowed_to_condition(args.first || User.current, :view_issues) } }
 
   # Returns true if +user+ or current user is allowed to view the version
@@ -119,12 +119,12 @@ class Version < ActiveRecord::Base
   
   # Returns the total amount of open issues for this version.
   def open_issues_count
-    @open_issues_count ||= Issue.count(:all, :conditions => ["fixed_version_id = ? AND is_closed = ?", self.id, false], :include => :status)
+    @open_issues_count ||= Issue.count(:all, :conditions => ["fixed_version_id = ? AND is_closed = ?", self.id, false], :joins => :status)
   end
 
   # Returns the total amount of closed issues for this version.
   def closed_issues_count
-    @closed_issues_count ||= Issue.count(:all, :conditions => ["fixed_version_id = ? AND is_closed = ?", self.id, true], :include => :status)
+    @closed_issues_count ||= Issue.count(:all, :conditions => ["fixed_version_id = ? AND is_closed = ?", self.id, true], :joins => :status)
   end
   
   def wiki_page
@@ -224,7 +224,7 @@ class Version < ActiveRecord::Base
         ratio = open ? 'done_ratio' : 100
         
         done = fixed_issues.sum("COALESCE(estimated_hours, #{estimated_average}) * #{ratio}",
-                                  :include => :status,
+                                  :joins => :status,
                                   :conditions => ["is_closed = ?", !open]).to_f
         progress = done / (estimated_average * issues_count)
       end

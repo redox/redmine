@@ -17,8 +17,9 @@
 
 ENV["RAILS_ENV"] = "test"
 require File.expand_path(File.dirname(__FILE__) + "/../config/environment")
-require 'test_help'
-require File.expand_path(File.dirname(__FILE__) + '/helper_testcase')
+# https://github.com/thoughtbot/shoulda/issues/171
+require 'shoulda/rails'
+require 'rails/test_help'
 require Rails.root.join('test', 'mocks', 'open_id_authentication_mock.rb')
 
 require File.expand_path(File.dirname(__FILE__) + '/object_daddy_helpers')
@@ -58,8 +59,10 @@ class ActiveSupport::TestCase
     assert_equal login, User.find(session[:user_id]).login
   end
   
+  include ActionDispatch::TestProcess
+  
   def uploaded_test_file(name, mime)
-    ActionController::TestUploadedFile.new(ActiveSupport::TestCase.fixture_path + "/files/#{name}", mime, true)
+    fixture_file_upload("files/#{name}", mime, true)
   end
 
   # Mock out a file

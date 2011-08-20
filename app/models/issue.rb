@@ -58,24 +58,29 @@ class Issue < ActiveRecord::Base
   validates_length_of :subject, :maximum => 255
   validates_inclusion_of :done_ratio, :in => 0..100
   validates_numericality_of :estimated_hours, :allow_nil => true
+  validate :validate_due_date, :validate_fixed_version
 
-  named_scope :visible, lambda {|*args| { :include => :project,
+  # named_scope :visible,
+  scope :visible,
+               lambda {|*args| { :joins => :project,
                                           :conditions => Issue.visible_condition(args.shift || User.current, *args) } }
 
-  named_scope :open, :conditions => ["#{IssueStatus.table_name}.is_closed = ?", false], :include => :status
+  # named_scope :open,
+  scope :open,
+     :conditions => ["#{IssueStatus.table_name}.is_closed = ?", false], :joins => :status
 
-  named_scope :recently_updated, :order => "#{Issue.table_name}.updated_on DESC"
-  named_scope :with_limit, lambda { |limit| { :limit => limit} }
-  named_scope :on_active_project, :include => [:status, :project, :tracker],
+  scope :recently_updated, :order => "#{Issue.table_name}.updated_on DESC"
+  scope :with_limit, lambda { |limit| { :limit => limit} }
+  scope :on_active_project, :joins => [:status, :project, :tracker],
                                   :conditions => ["#{Project.table_name}.status=#{Project::STATUS_ACTIVE}"]
 
-  named_scope :without_version, lambda {
+  scope :without_version, lambda {
     {
       :conditions => { :fixed_version_id => nil}
     }
   }
 
-  named_scope :with_query, lambda {|query|
+  scope :with_query, lambda {|query|
     {
       :conditions => Query.merge_conditions(query.statement)
     }
@@ -83,7 +88,9 @@ class Issue < ActiveRecord::Base
 
   before_create :default_assign
   before_save :close_duplicates, :update_done_ratio_from_issue_status
-  after_save :reschedule_following_issues, :update_nested_set_attributes, :update_parent_attributes, :create_journal
+  after_save :reschedule_following_issues,
+             :update_nested_set_attributes, :update_parent_attributes,
+             :create_journal, :update_tracker_and_parent
   after_destroy :update_parent_attributes
 
   # Returns a SQL conditions string used to find all issues visible by the specified user
@@ -120,7 +127,7 @@ class Issue < ActiveRecord::Base
     end
   end
 
-  def after_initialize
+  def set_default_values
     if new_record?
       # set default values for new records only
       self.status ||= IssueStatus.default
@@ -336,50 +343,9 @@ class Issue < ActiveRecord::Base
   def self.use_field_for_done_ratio?
     Setting.issue_done_ratio == 'issue_field'
   end
-
-  def validate
-    if self.due_date.nil? && @attributes['due_date'] && !@attributes['due_date'].empty?
-      errors.add :due_date, :not_a_date
-    end
-
-    if self.due_date and self.start_date and self.due_date < self.start_date
-      errors.add :due_date, :greater_than_start_date
-    end
-
-    if start_date && soonest_start && start_date < soonest_start
-      errors.add :start_date, :invalid
-    end
-
-    if fixed_version
-      if !assignable_versions.include?(fixed_version)
-        errors.add :fixed_version_id, :inclusion
-      elsif reopened? && fixed_version.closed?
-        errors.add_to_base I18n.t(:error_can_not_reopen_issue_on_closed_version)
-      end
-    end
-
-    # Checks that the issue can not be added/moved to a disabled tracker
-    if project && (tracker_id_changed? || project_id_changed?)
-      unless project.trackers.include?(tracker)
-        errors.add :tracker_id, :inclusion
-      end
-    end
-
-    # Checks parent issue assignment
-    if @parent_issue
-      if @parent_issue.project_id != project_id
-        errors.add :parent_issue_id, :not_same_project
-      elsif !new_record?
-        # moving an existing issue
-        if @parent_issue.root_id != root_id
-          # we can always move to another tree
-        elsif move_possible?(@parent_issue)
-          # move accepted inside tree
-        else
-          errors.add :parent_issue_id, :not_a_valid_parent
-        end
-      end
-    end
+  
+  def validate_on_create
+    errors.add :tracker_id, :invalid unless project.trackers.include?(tracker)
   end
 
   # Set the done_ratio using the status if that setting is set.  This will keep the done_ratios
@@ -504,7 +470,7 @@ class Issue < ActiveRecord::Base
   #   spent_hours => 0.0
   #   spent_hours => 50.2
   def spent_hours
-    @spent_hours ||= self_and_descendants.sum("#{TimeEntry.table_name}.hours", :include => :time_entries).to_f || 0.0
+    @spent_hours ||= self_and_descendants.sum("#{TimeEntry.table_name}.hours", :joins => :time_entries).to_f || 0.0
   end
 
   def relations
@@ -633,7 +599,7 @@ class Issue < ActiveRecord::Base
           end
         rescue ActiveRecord::StaleObjectError
           attachments[:files].each(&:destroy)
-          errors.add_to_base l(:notice_locking_conflict)
+          errors[:base] << l(:notice_locking_conflict)
           raise ActiveRecord::Rollback
         end
       end
@@ -797,7 +763,7 @@ class Issue < ActiveRecord::Base
   def recalculate_attributes_for(issue_id)
     if issue_id && p = Issue.find_by_id(issue_id)
       # priority = highest priority of children
-      if priority_position = p.children.maximum("#{IssuePriority.table_name}.position", :include => :priority)
+      if priority_position = p.children.maximum("#{IssuePriority.table_name}.position", :joins => :priority)
         p.priority = IssuePriority.find_by_position(priority_position)
       end
 
@@ -816,7 +782,7 @@ class Issue < ActiveRecord::Base
           if average == 0
             average = 1
           end
-          done = p.leaves.sum("COALESCE(estimated_hours, #{average}) * (CASE WHEN is_closed = #{connection.quoted_true} THEN 100 ELSE COALESCE(done_ratio, 0) END)", :include => :status).to_f
+          done = p.leaves.sum("COALESCE(estimated_hours, #{average}) * (CASE WHEN is_closed = #{connection.quoted_true} THEN 100 ELSE COALESCE(done_ratio, 0) END)", :joins => :status).to_f
           progress = done / (average * leaves_count)
           p.done_ratio = progress.round
         end
@@ -827,7 +793,7 @@ class Issue < ActiveRecord::Base
       p.estimated_hours = nil if p.estimated_hours == 0.0
 
       # ancestors will be recursively updated
-      p.save(false)
+      p.save
     end
   end
 
@@ -855,6 +821,30 @@ class Issue < ActiveRecord::Base
   def attachment_added(obj)
     if @current_journal && !obj.new_record?
       @current_journal.details << JournalDetail.new(:property => 'attachment', :prop_key => obj.id, :value => obj.filename)
+    end
+  end
+
+  def validate_due_date
+    if self.due_date.nil? && @attributes['due_date'] && !@attributes['due_date'].empty?
+      errors.add :due_date, :not_a_date
+    end
+
+    if self.due_date and self.start_date and self.due_date < self.start_date
+      errors.add :due_date, :greater_than_start_date
+    end
+
+    if start_date && soonest_start && start_date < soonest_start
+      errors.add :start_date, :invalid
+    end
+  end
+
+  def validate_fixed_version
+    if fixed_version
+      if !assignable_versions.include?(fixed_version)
+        errors.add :fixed_version_id, :inclusion
+      elsif reopened? && fixed_version.closed?
+        errors[:base] << I18n.t(:error_can_not_reopen_issue_on_closed_version)
+      end
     end
   end
 
@@ -942,8 +932,8 @@ class Issue < ActiveRecord::Base
     joins = options.delete(:joins)
 
     where = "#{Issue.table_name}.#{select_field}=j.id"
-
-    ActiveRecord::Base.connection.select_all("select    s.id as status_id, 
+    
+    ActiveRecord::Base.connection.select_all("select s.id as status_id, 
                                                 s.is_closed as closed, 
                                                 j.id as #{select_field},
                                                 count(#{Issue.table_name}.id) as total 
@@ -955,5 +945,33 @@ class Issue < ActiveRecord::Base
                                                 and #{Issue.table_name}.project_id=#{Project.table_name}.id
                                                 and #{visible_condition(User.current, :project => project)}
                                               group by s.id, s.is_closed, j.id")
+  end
+  
+  def update_tracker_and_parent
+    # Reload is needed in order to get the right status
+    reload
+    
+    # Checks that the issue can not be added/moved to a disabled tracker
+    if project && (tracker_id_changed? || project_id_changed?)
+      unless project.trackers.include?(tracker)
+        errors.add :tracker_id, :inclusion
+      end
+    end
+    
+    # Checks parent issue assignment
+    if @parent_issue
+      if @parent_issue.project_id != project_id
+        errors.add :parent_issue_id, :not_same_project
+      elsif !new_record?
+        # moving an existing issue
+        if @parent_issue.root_id != root_id
+          # we can always move to another tree
+        elsif move_possible?(@parent_issue)
+          # move accepted inside tree
+        else
+          errors.add :parent_issue_id, :not_a_valid_parent
+        end
+      end
+    end
   end
 end

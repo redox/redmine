@@ -40,20 +40,21 @@ module Redmine
         if File.file?(filename)
           @config.merge!(load_from_yaml(filename, env))
         end
-        
-        # Compatibility mode for those who copy email.yml over configuration.yml
-        %w(delivery_method smtp_settings sendmail_settings).each do |key|
-          if value = @config.delete(key)
-            @config['email_delivery'] ||= {}
-            @config['email_delivery'][key] = value
+
+        if env != 'test'
+          # Compatibility mode for those who copy email.yml over configuration.yml
+          %w(delivery_method smtp_settings sendmail_settings).each do |key|
+            if value = @config.delete(key)
+              @config['email_delivery'] ||= {}
+              @config['email_delivery'][key] = value
+            end
           end
-        end
         
-        if @config['email_delivery']
-          ActionMailer::Base.perform_deliveries = true
-          @config['email_delivery'].each do |k, v|
-            v.symbolize_keys! if v.respond_to?(:symbolize_keys!)
-            ActionMailer::Base.send("#{k}=", v)
+          if @config['email_delivery']
+            @config['email_delivery'].each do |k, v|
+              v.symbolize_keys! if v.respond_to?(:symbolize_keys!)
+              ActionMailer::Base.send("#{k}=", v)
+            end
           end
         end
           

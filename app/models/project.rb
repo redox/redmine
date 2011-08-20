@@ -81,14 +81,12 @@ class Project < ActiveRecord::Base
 
   before_destroy :delete_all_members
 
-  named_scope :has_module, lambda { |mod| { :conditions => ["#{Project.table_name}.id IN (SELECT em.project_id FROM #{EnabledModule.table_name} em WHERE em.name=?)", mod.to_s] } }
-  named_scope :active, { :conditions => "#{Project.table_name}.status = #{STATUS_ACTIVE}"}
-  named_scope :all_public, { :conditions => { :is_public => true } }
-  named_scope :visible, lambda {|*args| {:conditions => Project.visible_condition(args.shift || User.current, *args) }}
+  scope :has_module, lambda { |mod| { :conditions => ["#{Project.table_name}.id IN (SELECT em.project_id FROM #{EnabledModule.table_name} em WHERE em.name=?)", mod.to_s] } }
+  scope :active, { :conditions => "#{Project.table_name}.status = #{STATUS_ACTIVE}"}
+  scope :all_public, { :conditions => { :is_public => true } }
+  scope :visible, lambda {|*args| {:conditions => Project.visible_condition(args.shift || User.current, *args) }}
   
-  def initialize(attributes = nil)
-    super
-    
+  def after_initialize
     initialized = (attributes || {}).stringify_keys
     if !initialized.key?('identifier') && Setting.sequential_project_identifiers? 
       self.identifier = Project.next_identifier
@@ -274,7 +272,7 @@ class Project < ActiveRecord::Base
     # Check that there is no issue of a non descendant project that is assigned
     # to one of the project or descendant versions
     v_ids = self_and_descendants.collect {|p| p.version_ids}.flatten
-    if v_ids.any? && Issue.find(:first, :include => :project,
+    if v_ids.any? && Issue.find(:first, :joins => :project,
                                         :conditions => ["(#{Project.table_name}.lft < ? OR #{Project.table_name}.rgt > ?)" +
                                                         " AND #{Issue.table_name}.fixed_version_id IN (?)", lft, rgt, v_ids])
       return false
@@ -389,7 +387,7 @@ class Project < ActiveRecord::Base
   # Returns a scope of the Versions on subprojects
   def rolled_up_versions
     @rolled_up_versions ||=
-      Version.scoped(:include => :project,
+      Version.scoped(:joins => :project,
                      :conditions => ["#{Project.table_name}.lft >= ? AND #{Project.table_name}.rgt <= ? AND #{Project.table_name}.status = #{STATUS_ACTIVE}", lft, rgt])
   end
   
@@ -397,7 +395,7 @@ class Project < ActiveRecord::Base
   def shared_versions
     @shared_versions ||= begin
       r = root? ? self : root
-      Version.scoped(:include => :project,
+      Version.scoped(:joins => :project,
                      :conditions => "#{Project.table_name}.id = #{id}" +
                                     " OR (#{Project.table_name}.status = #{Project::STATUS_ACTIVE} AND (" +
                                           " #{Version.table_name}.sharing = 'system'" +
@@ -806,7 +804,7 @@ class Project < ActiveRecord::Base
   # Copies queries from +project+
   def copy_queries(project)
     project.queries.each do |query|
-      new_query = Query.new
+      new_query = ::Query.new
       new_query.attributes = query.attributes.dup.except("id", "project_id", "sort_criteria")
       new_query.sort_criteria = query.sort_criteria if query.sort_criteria
       new_query.project = self

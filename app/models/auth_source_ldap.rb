@@ -26,10 +26,7 @@ class AuthSourceLdap < AuthSource
   validates_numericality_of :port, :only_integer => true
   
   before_validation :strip_ldap_attributes
-  
-  def after_initialize
-    self.port = 389 if self.port == 0
-  end
+  after_initialize :set_port
   
   def authenticate(login, password)
     return nil if login.blank? || password.blank?
@@ -126,5 +123,11 @@ class AuthSourceLdap < AuthSource
     if !attr_name.blank?
       entry[attr_name].is_a?(Array) ? entry[attr_name].first : entry[attr_name]
     end
+  end
+  
+  private
+  
+  def set_port
+    self.port = 389 if self.port == 0
   end
 end

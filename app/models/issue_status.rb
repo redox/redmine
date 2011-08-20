@@ -27,11 +27,9 @@ class IssueStatus < ActiveRecord::Base
   validates_length_of :name, :maximum => 30
   validates_inclusion_of :default_done_ratio, :in => 0..100, :allow_nil => true
   
-  named_scope :named, lambda {|arg| { :conditions => ["LOWER(#{table_name}.name) = LOWER(?)", arg.to_s.strip]}}
+  scope :named, lambda {|arg| { :conditions => ["LOWER(#{table_name}.name) = LOWER(?)", arg.to_s.strip]}}
 
-  def after_save
-    IssueStatus.update_all("is_default=#{connection.quoted_false}", ['id <> ?', id]) if self.is_default?
-  end  
+  after_save :update_default  
   
   # Returns the default status for new issues
   def self.default
@@ -91,11 +89,16 @@ class IssueStatus < ActiveRecord::Base
   
   def to_s; name end
 
-private
+  private
+  
   def check_integrity
     raise "Can't delete status" if Issue.find(:first, :conditions => ["status_id=?", self.id])
   end
-  
+
+  def update_default
+    IssueStatus.update_all("is_default=#{connection.quoted_false}", ['id <> ?', id]) if self.is_default?
+  end
+
   # Deletes associated workflows
   def delete_workflows
     Workflow.delete_all(["old_status_id = :id OR new_status_id = :id", {:id => id}])

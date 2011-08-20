@@ -33,7 +33,7 @@ class VersionTest < ActiveSupport::TestCase
   def test_invalid_effective_date_validation
     v = Version.new(:project => Project.find(1), :name => '1.1', :effective_date => '99999-01-01')
     assert !v.save
-    assert_equal I18n.translate('activerecord.errors.messages.not_a_date'), v.errors.on(:effective_date)
+    assert_equal I18n.translate('activerecord.errors.messages.not_a_date'), v.errors[:effective_date].join(", ")
   end
   
   def test_progress_should_be_0_with_no_assigned_issues
@@ -224,6 +224,8 @@ class VersionTest < ActiveSupport::TestCase
   def add_issue(version, attributes={})
     Issue.create!({:project => version.project,
                    :fixed_version => version,
+                   :status_id => 1,
+                   :priority => IssuePriority.all.first,
                    :subject => 'Test',
                    :author => User.find(:first),
                    :tracker => version.project.trackers.find(:first)}.merge(attributes))

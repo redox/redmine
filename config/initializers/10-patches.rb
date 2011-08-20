@@ -1,4 +1,3 @@
-
 require 'active_record'
 
 module ActiveRecord
@@ -6,7 +5,7 @@ module ActiveRecord
     include Redmine::I18n
     
     # Translate attribute names for validation errors display
-    def self.human_attribute_name(attr)
+    def self.human_attribute_name(attr, options = {})
       l("field_#{attr.to_s.gsub(/_id$/, '')}", :default => attr)
     end
   end
@@ -81,13 +80,13 @@ ActionMailer::Base.send :include, AsynchronousMailer
 
 # TMail::Unquoter.convert_to_with_fallback_on_iso_8859_1 introduced in TMail 1.2.7
 # triggers a test failure in test_add_issue_with_japanese_keywords(MailHandlerTest)
-module TMail
-  class Unquoter
-    class << self
-      alias_method :convert_to, :convert_to_without_fallback_on_iso_8859_1
-    end
-  end
-end
+#module TMail
+#  class Unquoter
+#    class << self
+#      alias_method :convert_to, :convert_to_without_fallback_on_iso_8859_1
+#    end
+#  end
+#end
 
 module ActionController
   module MimeResponds
