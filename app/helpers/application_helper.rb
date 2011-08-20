@@ -894,17 +894,17 @@ module ApplicationHelper
   def javascript_heads
     tags = javascript_include_tag(:defaults)
     unless User.current.pref.warn_on_leaving_unsaved == '0'
-      tags << "\n" + javascript_tag("Event.observe(window, 'load', function(){ new WarnLeavingUnsaved('#{escape_javascript( l(:text_warn_on_leaving_unsaved) )}'); });")
+      tags << ("\n" + javascript_tag("Event.observe(window, 'load', function(){ new WarnLeavingUnsaved('#{escape_javascript( l(:text_warn_on_leaving_unsaved) )}'); });")).html_safe
     end
     tags
   end
 
   def favicon
-    "<link rel='shortcut icon' href='#{image_path('/favicon.ico')}' />"
+    "<link rel='shortcut icon' href='#{image_path('/favicon.ico')}' />".html_safe
   end
 
   def robot_exclusion_tag
-    '<meta name="robots" content="noindex,follow,noarchive" />'
+    '<meta name="robots" content="noindex,follow,noarchive" />'.html_safe
   end
   
   # Returns true if arg is expected in the API response

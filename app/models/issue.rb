@@ -62,16 +62,16 @@ class Issue < ActiveRecord::Base
 
   # named_scope :visible,
   scope :visible,
-               lambda {|*args| { :include => :project,
+               lambda {|*args| { :joins => :project,
                                           :conditions => Issue.visible_condition(args.shift || User.current, *args) } }
 
   # named_scope :open,
   scope :open,
-     :conditions => ["#{IssueStatus.table_name}.is_closed = ?", false], :include => :status
+     :conditions => ["#{IssueStatus.table_name}.is_closed = ?", false], :joins => :status
 
   scope :recently_updated, :order => "#{Issue.table_name}.updated_on DESC"
   scope :with_limit, lambda { |limit| { :limit => limit} }
-  scope :on_active_project, :include => [:status, :project, :tracker],
+  scope :on_active_project, :joins => [:status, :project, :tracker],
                                   :conditions => ["#{Project.table_name}.status=#{Project::STATUS_ACTIVE}"]
 
   scope :without_version, lambda {
@@ -454,7 +454,7 @@ class Issue < ActiveRecord::Base
   #   spent_hours => 0.0
   #   spent_hours => 50.2
   def spent_hours
-    @spent_hours ||= self_and_descendants.sum("#{TimeEntry.table_name}.hours", :include => :time_entries).to_f || 0.0
+    @spent_hours ||= self_and_descendants.sum("#{TimeEntry.table_name}.hours", :joins => :time_entries).to_f || 0.0
   end
 
   def relations
@@ -570,7 +570,7 @@ class Issue < ActiveRecord::Base
           end
         rescue ActiveRecord::StaleObjectError
           attachments[:files].each(&:destroy)
-          errors.add_to_base l(:notice_locking_conflict)
+          errors[:base] << l(:notice_locking_conflict)
           raise ActiveRecord::Rollback
         end
       end
@@ -734,7 +734,7 @@ class Issue < ActiveRecord::Base
   def recalculate_attributes_for(issue_id)
     if issue_id && p = Issue.find_by_id(issue_id)
       # priority = highest priority of children
-      if priority_position = p.children.maximum("#{IssuePriority.table_name}.position", :include => :priority)
+      if priority_position = p.children.maximum("#{IssuePriority.table_name}.position", :joins => :priority)
         p.priority = IssuePriority.find_by_position(priority_position)
       end
 
@@ -753,7 +753,7 @@ class Issue < ActiveRecord::Base
           if average == 0
             average = 1
           end
-          done = p.leaves.sum("COALESCE(estimated_hours, #{average}) * (CASE WHEN is_closed = #{connection.quoted_true} THEN 100 ELSE COALESCE(done_ratio, 0) END)", :include => :status).to_f
+          done = p.leaves.sum("COALESCE(estimated_hours, #{average}) * (CASE WHEN is_closed = #{connection.quoted_true} THEN 100 ELSE COALESCE(done_ratio, 0) END)", :joins => :status).to_f
           progress = done / (average * leaves_count)
           p.done_ratio = progress.round
         end
@@ -764,7 +764,7 @@ class Issue < ActiveRecord::Base
       p.estimated_hours = nil if p.estimated_hours == 0.0
 
       # ancestors will be recursively updated
-      p.save(false)
+      p.save
     end
   end
 
@@ -807,7 +807,7 @@ class Issue < ActiveRecord::Base
       if !assignable_versions.include?(fixed_version)
         errors.add :fixed_version_id, :inclusion
       elsif reopened? && fixed_version.closed?
-        errors.add_to_base I18n.t(:error_can_not_reopen_issue_on_closed_version)
+        errors[:base] << I18n.t(:error_can_not_reopen_issue_on_closed_version)
       end
     end
   end

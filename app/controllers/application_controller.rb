@@ -47,7 +47,7 @@ class ApplicationController < ActionController::Base
   helper Redmine::MenuManager::MenuHelper
 
   Redmine::Scm::Base.all.each do |scm|
-    require_dependency "repository/#{scm.underscore}"
+    require_dependency "#{scm.underscore}"
   end
 
   def user_setup

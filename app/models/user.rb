@@ -587,7 +587,7 @@ class AnonymousUser < User
 
   def ensure_single_anonymous_user
     # There should be only one AnonymousUser in the database
-    errors.add_to_base 'An anonymous user already exists.' if AnonymousUser.find(:first)
+    errors[:base] << 'An anonymous user already exists.' if AnonymousUser.find(:first)
   end
   
   def available_custom_fields

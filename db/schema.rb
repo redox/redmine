@@ -10,7 +10,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20110220160626) do
+ActiveRecord::Schema.define(:version => 20110511000000) do
 
   create_table "attachments", :force => true do |t|
     t.integer  "container_id",                 :default => 0,  :null => false
@@ -36,7 +36,7 @@ ActiveRecord::Schema.define(:version => 20110220160626) do
     t.string  "host",              :limit => 60
     t.integer "port"
     t.string  "account"
-    t.string  "account_password",  :limit => 60
+    t.string  "account_password",                :default => ""
     t.string  "base_dn"
     t.string  "attr_login",        :limit => 30
     t.string  "attr_firstname",    :limit => 30
@@ -59,13 +59,13 @@ ActiveRecord::Schema.define(:version => 20110220160626) do
   end
 
   add_index "boards", ["last_message_id"], :name => "index_boards_on_last_message_id"
-  add_index "boards", ["project_id"], :name => "altered_boards_project_id"
+  add_index "boards", ["project_id"], :name => "boards_project_id"
 
   create_table "changes", :force => true do |t|
-    t.integer "changeset_id",                                 :null => false
-    t.string  "action",        :limit => 1,   :default => "", :null => false
-    t.text    "path",          :limit => 255,                 :null => false
-    t.text    "from_path",     :limit => 255
+    t.integer "changeset_id",                               :null => false
+    t.string  "action",        :limit => 1, :default => "", :null => false
+    t.text    "path",                                       :null => false
+    t.text    "from_path"
     t.string  "from_revision"
     t.string  "revision"
     t.string  "branch"
@@ -85,7 +85,7 @@ ActiveRecord::Schema.define(:version => 20110220160626) do
   end
 
   add_index "changesets", ["committed_on"], :name => "index_changesets_on_committed_on"
-  add_index "changesets", ["repository_id", "revision"], :name => "altered_changesets_repos_rev", :unique => true
+  add_index "changesets", ["repository_id", "revision"], :name => "changesets_repos_rev", :unique => true
   add_index "changesets", ["repository_id", "scmid"], :name => "changesets_repos_scmid"
   add_index "changesets", ["repository_id"], :name => "index_changesets_on_repository_id"
   add_index "changesets", ["user_id"], :name => "index_changesets_on_user_id"
@@ -224,27 +224,28 @@ ActiveRecord::Schema.define(:version => 20110220160626) do
   add_index "issue_statuses", ["position"], :name => "index_issue_statuses_on_position"
 
   create_table "issues", :force => true do |t|
-    t.integer  "tracker_id",       :default => 0,  :null => false
-    t.integer  "project_id",       :default => 0,  :null => false
-    t.string   "subject",          :default => "", :null => false
+    t.integer  "tracker_id",       :default => 0,     :null => false
+    t.integer  "project_id",       :default => 0,     :null => false
+    t.string   "subject",          :default => "",    :null => false
     t.text     "description"
     t.date     "due_date"
     t.integer  "category_id"
-    t.integer  "status_id",        :default => 0,  :null => false
+    t.integer  "status_id",        :default => 0,     :null => false
     t.integer  "assigned_to_id"
-    t.integer  "priority_id",      :default => 0,  :null => false
+    t.integer  "priority_id",      :default => 0,     :null => false
     t.integer  "fixed_version_id"
-    t.integer  "author_id",        :default => 0,  :null => false
-    t.integer  "lock_version",     :default => 0,  :null => false
+    t.integer  "author_id",        :default => 0,     :null => false
+    t.integer  "lock_version",     :default => 0,     :null => false
     t.datetime "created_on"
     t.datetime "updated_on"
     t.date     "start_date"
-    t.integer  "done_ratio",       :default => 0,  :null => false
+    t.integer  "done_ratio",       :default => 0,     :null => false
     t.float    "estimated_hours"
     t.integer  "parent_id"
     t.integer  "root_id"
     t.integer  "lft"
     t.integer  "rgt"
+    t.boolean  "is_private",       :default => false, :null => false
   end
 
   add_index "issues", ["assigned_to_id"], :name => "index_issues_on_assigned_to_id"
@@ -262,8 +263,8 @@ ActiveRecord::Schema.define(:version => 20110220160626) do
     t.integer "journal_id",               :default => 0,  :null => false
     t.string  "property",   :limit => 30, :default => "", :null => false
     t.string  "prop_key",   :limit => 30, :default => "", :null => false
-    t.string  "old_value"
-    t.string  "value"
+    t.text    "old_value"
+    t.text    "value"
   end
 
   add_index "journal_details", ["journal_id"], :name => "journal_details_journal_id"
@@ -351,15 +352,15 @@ ActiveRecord::Schema.define(:version => 20110220160626) do
   end
 
   create_table "projects", :force => true do |t|
-    t.string   "name",                       :default => "",   :null => false
-    t.text     "description", :limit => 255
-    t.string   "homepage",                   :default => ""
-    t.boolean  "is_public",                  :default => true, :null => false
+    t.string   "name",        :default => "",   :null => false
+    t.text     "description"
+    t.string   "homepage",    :default => ""
+    t.boolean  "is_public",   :default => true, :null => false
     t.integer  "parent_id"
     t.datetime "created_on"
     t.datetime "updated_on"
     t.string   "identifier"
-    t.integer  "status",                     :default => 1,    :null => false
+    t.integer  "status",      :default => 1,    :null => false
     t.integer  "lft"
     t.integer  "rgt"
   end
@@ -390,22 +391,26 @@ ActiveRecord::Schema.define(:version => 20110220160626) do
   add_index "queries", ["user_id"], :name => "index_queries_on_user_id"
 
   create_table "repositories", :force => true do |t|
-    t.integer "project_id",               :default => 0,  :null => false
-    t.string  "url",                      :default => "", :null => false
-    t.string  "login",      :limit => 60, :default => ""
-    t.string  "password",   :limit => 60, :default => ""
-    t.string  "root_url",                 :default => ""
+    t.integer "project_id",                  :default => 0,  :null => false
+    t.string  "url",                         :default => "", :null => false
+    t.string  "login",         :limit => 60, :default => ""
+    t.string  "password",                    :default => ""
+    t.string  "root_url",                    :default => ""
     t.string  "type"
+    t.string  "path_encoding", :limit => 64
+    t.string  "log_encoding",  :limit => 64
+    t.text    "extra_info"
   end
 
   add_index "repositories", ["project_id"], :name => "index_repositories_on_project_id"
 
   create_table "roles", :force => true do |t|
-    t.string  "name",        :limit => 30, :default => "",   :null => false
-    t.integer "position",                  :default => 1
-    t.boolean "assignable",                :default => true
-    t.integer "builtin",                   :default => 0,    :null => false
+    t.string  "name",              :limit => 30, :default => "",        :null => false
+    t.integer "position",                        :default => 1
+    t.boolean "assignable",                      :default => true
+    t.integer "builtin",                         :default => 0,         :null => false
     t.text    "permissions"
+    t.string  "issues_visibility", :limit => 30, :default => "default", :null => false
   end
 
   create_table "settings", :force => true do |t|
@@ -478,10 +483,12 @@ ActiveRecord::Schema.define(:version => 20110220160626) do
     t.string   "type"
     t.string   "identity_url"
     t.string   "mail_notification",               :default => "",    :null => false
+    t.string   "salt",              :limit => 64
   end
 
   add_index "users", ["auth_source_id"], :name => "index_users_on_auth_source_id"
   add_index "users", ["id", "type"], :name => "index_users_on_id_and_type"
+  add_index "users", ["type"], :name => "index_users_on_type"
 
   create_table "versions", :force => true do |t|
     t.integer  "project_id",      :default => 0,      :null => false
@@ -495,7 +502,7 @@ ActiveRecord::Schema.define(:version => 20110220160626) do
     t.string   "sharing",         :default => "none", :null => false
   end
 
-  add_index "versions", ["project_id"], :name => "altered_versions_project_id"
+  add_index "versions", ["project_id"], :name => "versions_project_id"
   add_index "versions", ["sharing"], :name => "index_versions_on_sharing"
 
   create_table "watchers", :force => true do |t|
@@ -509,26 +516,26 @@ ActiveRecord::Schema.define(:version => 20110220160626) do
   add_index "watchers", ["watchable_id", "watchable_type"], :name => "index_watchers_on_watchable_id_and_watchable_type"
 
   create_table "wiki_content_versions", :force => true do |t|
-    t.integer  "wiki_content_id",                              :null => false
-    t.integer  "page_id",                                      :null => false
+    t.integer  "wiki_content_id",                                       :null => false
+    t.integer  "page_id",                                               :null => false
     t.integer  "author_id"
-    t.binary   "data"
-    t.string   "compression",     :limit => 6, :default => ""
-    t.string   "comments",                     :default => ""
-    t.datetime "updated_on",                                   :null => false
-    t.integer  "version",                                      :null => false
+    t.binary   "data",            :limit => 2147483647
+    t.string   "compression",     :limit => 6,          :default => ""
+    t.string   "comments",                              :default => ""
+    t.datetime "updated_on",                                            :null => false
+    t.integer  "version",                                               :null => false
   end
 
   add_index "wiki_content_versions", ["updated_on"], :name => "index_wiki_content_versions_on_updated_on"
   add_index "wiki_content_versions", ["wiki_content_id"], :name => "wiki_content_versions_wcid"
 
   create_table "wiki_contents", :force => true do |t|
-    t.integer  "page_id",                    :null => false
+    t.integer  "page_id",                                          :null => false
     t.integer  "author_id"
-    t.text     "text"
-    t.string   "comments",   :default => ""
-    t.datetime "updated_on",                 :null => false
-    t.integer  "version",                    :null => false
+    t.text     "text",       :limit => 2147483647
+    t.string   "comments",                         :default => ""
+    t.datetime "updated_on",                                       :null => false
+    t.integer  "version",                                          :null => false
   end
 
   add_index "wiki_contents", ["author_id"], :name => "index_wiki_contents_on_author_id"
