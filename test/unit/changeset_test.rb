@@ -240,7 +240,7 @@ class ChangesetTest < ActiveSupport::TestCase
     # str = File.read("#{RAILS_ROOT}/test/fixtures/encoding/iso-8859-1.txt")
     str = "Texte encod\xe9 en ISO-8859-1."
     str.force_encoding("ASCII-8BIT") if str.respond_to?(:force_encoding)
-    r = Repository::Bazaar.create!(
+    r = Bazaar.create!(
             :project      => proj,
             :url          => '/tmp/test/bazaar',
             :log_encoding => 'ISO-8859-1' )
@@ -263,7 +263,7 @@ class ChangesetTest < ActiveSupport::TestCase
     str2 = "\xe9a\xe9b\xe9c\xe9d\xe9e test"
     str1.force_encoding("UTF-8") if str1.respond_to?(:force_encoding)
     str2.force_encoding("ASCII-8BIT") if str2.respond_to?(:force_encoding)
-    r = Repository::Bazaar.create!(
+    r = Bazaar.create!(
             :project      => proj,
             :url          => '/tmp/test/bazaar',
             :log_encoding => 'UTF-8' )
@@ -285,7 +285,7 @@ class ChangesetTest < ActiveSupport::TestCase
     if str.respond_to?(:force_encoding)
       str.force_encoding('ASCII-8BIT')
     end
-    r = Repository::Bazaar.create!(
+    r = Bazaar.create!(
             :project      => proj,
             :url          => '/tmp/test/bazaar',
             :log_encoding => 'ISO-2022-JP' )
@@ -312,7 +312,7 @@ class ChangesetTest < ActiveSupport::TestCase
       assert_equal s3.encode('UTF-8'), s4
     end
     proj = Project.find(3)
-    r = Repository::Bazaar.create!(
+    r = Bazaar.create!(
             :project      => proj,
             :url          => '/tmp/test/bazaar',
             :log_encoding => 'ISO-8859-1' )
@@ -332,7 +332,7 @@ class ChangesetTest < ActiveSupport::TestCase
     str2 = "\xe9a\xe9b\xe9c\xe9d\xe9e test"
     str1.force_encoding("UTF-8")      if str1.respond_to?(:force_encoding)
     str2.force_encoding("ASCII-8BIT") if str2.respond_to?(:force_encoding)
-    r = Repository::Bazaar.create!(
+    r = Bazaar.create!(
             :project => proj,
             :url => '/tmp/test/bazaar',
             :log_encoding => 'UTF-8' )
@@ -357,7 +357,7 @@ class ChangesetTest < ActiveSupport::TestCase
 
   def test_comments_nil
     proj = Project.find(3)
-    r = Repository::Bazaar.create!(
+    r = Bazaar.create!(
             :project      => proj,
             :url          => '/tmp/test/bazaar',
             :log_encoding => 'ISO-8859-1' )
@@ -378,7 +378,7 @@ class ChangesetTest < ActiveSupport::TestCase
 
   def test_comments_empty
     proj = Project.find(3)
-    r = Repository::Bazaar.create!(
+    r = Bazaar.create!(
             :project      => proj,
             :url          => '/tmp/test/bazaar',
             :log_encoding => 'ISO-8859-1' )
