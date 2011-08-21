@@ -713,6 +713,7 @@ class Query < ActiveRecord::Base
   # Returns a SQL clause for a date or datetime field using relative dates.
   def relative_date_clause(table, field, days_from, days_to)
     date_clause(table, field, (days_from ? Date.today + days_from : nil), (days_to ? Date.today + days_to : nil))
+  end
   
   def is_project_nil
     # Store the fact that project is nil (used in #editable_by?)
