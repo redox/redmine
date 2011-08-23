@@ -185,7 +185,7 @@ class ChangesetTest < ActiveSupport::TestCase
 
   def test_commit_referencing_a_parent_project_issue
     # repository of child project
-    r = Repository::Subversion.create!(
+    r = Subversion.create!(
           :project => Project.find(3),
           :url     => 'svn://localhost/test')
 
