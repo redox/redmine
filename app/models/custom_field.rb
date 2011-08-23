@@ -27,12 +27,9 @@ class CustomField < ActiveRecord::Base
   validate :validate_possible_values, :validate_default_value
   
   before_validation :lock_fields
-
-  def initialize(attributes = nil)
-    super
-    self.possible_values ||= []
-  end
   
+  after_initialize :init_possible_values
+
   def lock_fields
     # make sure these fields are not searchable
     self.searchable = false if %w(int float date bool).include?(field_format)
@@ -173,5 +170,9 @@ private
     v = CustomValue.new(:custom_field => self.clone, :value => default_value, :customized => nil)
     v.custom_field.is_required = false
     errors.add(:default_value, :invalid) unless v.valid?
+  end
+  
+  def init_possible_values
+    self.possible_values ||= []
   end
 end

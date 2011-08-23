@@ -147,7 +147,7 @@ class Query < ActiveRecord::Base
     QueryColumn.new(:done_ratio, :sortable => "#{Issue.table_name}.done_ratio", :groupable => true),
     QueryColumn.new(:created_on, :sortable => "#{Issue.table_name}.created_on", :default_order => 'desc'),
   ]
-  cattr_reader :available_columns
+  cattr_accessor :available_columns
 
   scope :visible, lambda {|*args|
     user = args.shift || User.current
@@ -162,8 +162,9 @@ class Query < ActiveRecord::Base
   attr_accessor :subject, :created_on, :updated_on, :start_date, :due_date, :estimated_hours, :done_ratio
   
   after_initialize :is_project_nil
+  after_initialize :init_filters
   
-  def after_initialize
+  def init_filters
     self.filters ||= { 'status_id' => {:operator => "o", :values => [""]} }
   end
   
@@ -343,15 +344,11 @@ class Query < ActiveRecord::Base
 
   def available_columns
     return @available_columns if @available_columns
-    @available_columns = Query.available_columns
+    @available_columns = ::Query.available_columns
     @available_columns += (project ?
                             project.all_issue_custom_fields :
                             IssueCustomField.find(:all)
                            ).collect {|cf| QueryCustomFieldColumn.new(cf) }
-  end
-
-  def self.available_columns=(v)
-    self.available_columns = (v)
   end
   
   def self.add_available_column(column)
@@ -545,7 +542,7 @@ class Query < ActiveRecord::Base
     order_option = nil if order_option.blank?
     
     Issue.find :all, :include => ([:status, :project] + (options[:include] || [])).uniq,
-                     :conditions => Query.merge_conditions(statement, options[:conditions]),
+                     :conditions => ::Query.merge_conditions(statement, options[:conditions]),
                      :order => order_option,
                      :limit  => options[:limit],
                      :offset => options[:offset]
@@ -569,9 +566,65 @@ class Query < ActiveRecord::Base
   # Valid options are :conditions
   def versions(options={})
     Version.find :all, :include => :project,
-                       :conditions => Query.merge_conditions(project_statement, options[:conditions])
+                       :conditions => ::Query.merge_conditions(project_statement, options[:conditions])
   rescue ::ActiveRecord::StatementInvalid => e
     raise StatementInvalid.new(e.message)
+  end
+  
+  def sql_for_watcher_id_field(field, operator, value)
+    db_table = Watcher.table_name
+    "#{Issue.table_name}.id #{ operator == '=' ? 'IN' : 'NOT IN' } (SELECT #{db_table}.watchable_id FROM #{db_table} WHERE #{db_table}.watchable_type='Issue' AND " +
+      sql_for_field(field, '=', value, db_table, 'user_id') + ')'
+  end
+
+  def sql_for_member_of_group_field(field, operator, value)
+    if operator == '*' # Any group
+      groups = Group.all
+      operator = '=' # Override the operator since we want to find by assigned_to
+    elsif operator == "!*"
+      groups = Group.all
+      operator = '!' # Override the operator since we want to find by assigned_to
+    else
+      groups = Group.find_all_by_id(value)
+    end
+    groups ||= []
+
+    members_of_groups = groups.inject([]) {|user_ids, group|
+      if group && group.user_ids.present?
+        user_ids << group.user_ids
+      end
+      user_ids.flatten.uniq.compact
+    }.sort.collect(&:to_s)
+
+    '(' + sql_for_field("assigned_to_id", operator, members_of_groups, Issue.table_name, "assigned_to_id", false) + ')'
+  end
+
+  def sql_for_assigned_to_role_field(field, operator, value)
+    if operator == "*" # Any Role
+      roles = Role.givable
+      operator = '=' # Override the operator since we want to find by assigned_to
+    elsif operator == "!*" # No role
+      roles = Role.givable
+      operator = '!' # Override the operator since we want to find by assigned_to
+    else
+      roles = Role.givable.find_all_by_id(value)
+    end
+    roles ||= []
+
+    members_of_roles = roles.inject([]) {|user_ids, role|
+      if role && role.members
+        user_ids << role.members.collect(&:user_id)
+      end
+      user_ids.flatten.uniq.compact
+    }.sort.collect(&:to_s)
+
+    '(' + sql_for_field("assigned_to_id", operator, members_of_roles, Issue.table_name, "assigned_to_id", false) + ')'
+  end
+  
+  def sql_for_custom_field(field, operator, value, custom_field_id)
+    db_table = CustomValue.table_name
+    db_field = 'value'
+    "#{Issue.table_name}.id IN (SELECT #{Issue.table_name}.id FROM #{Issue.table_name} LEFT OUTER JOIN #{db_table} ON #{db_table}.customized_type='Issue' AND #{db_table}.customized_id=#{Issue.table_name}.id AND #{db_table}.custom_field_id=#{custom_field_id} WHERE " + sql_for_field(field, operator, value, db_table, db_field, true) + ')'
   end
 
   # Helper method to generate the WHERE sql for a +field+, +operator+ and a +value+
