@@ -48,7 +48,7 @@ class Mailer < ActionMailer::Base
     
     @issue = issue
     @issue_url = url_for(:controller => 'issues', :action => 'show', :id => issue)
-    mail :message_id => issue,
+    mail "issue_add", :message_id => issue,
       :to => issue.recipients,
       :cc => (issue.watcher_recipients - issue.recipients),
       :subject => "[#{issue.project.name} - #{issue.tracker.name} ##{issue.id}] (#{issue.status.name}) #{issue.subject}"
@@ -71,13 +71,12 @@ class Mailer < ActionMailer::Base
     s << "(#{issue.status.name}) " if journal.new_value_for('status_id')
     s << issue.subject
     @issue = issue
-    @journal = journal,
+    @journal = journal
     @issue_url = url_for(:controller => 'issues', :action => 'show', :id => issue)
-    mail :message_id => journal,
+    mail "issue_edit", :message_id => journal,
       :references => issue,
       :to => issue.recipients,
-      # Watchers in cc
-      :cc => (issue.watcher_recipients - issue.recipients),
+      :cc => (issue.watcher_recipients - issue.recipients), # Watchers in cc
       :subject => s
   end
 
@@ -86,7 +85,7 @@ class Mailer < ActionMailer::Base
     @issues = issues
     @days = days
     @issues_url = url_for(:controller => 'issues', :action => 'index', :set_filter => 1, :assigned_to_id => user.id, :sort => 'due_date:asc')
-    mail :to => user.mail,
+    mail "reminder", :to => user.mail,
       :subject => l(:mail_subject_reminder, :count => issues.size, :days => days)
   end
 
@@ -99,7 +98,7 @@ class Mailer < ActionMailer::Base
     redmine_headers 'Project' => document.project.identifier
     @document = document
     @document_url = url_for(:controller => 'documents', :action => 'show', :id => document)
-    mail :to => document.recipients,
+    mail "document_added", :to => document.recipients,
       :subject => "[#{document.project.name}] #{l(:label_document_new)}: #{document.title}"
   end
 
@@ -132,7 +131,7 @@ class Mailer < ActionMailer::Base
     @attachments = attachments
     @added_to = added_to
     @added_to_url = added_to_url
-    mail :subject => "[#{container.project.name}] #{l(:label_attachment_new)}", :to => recipients
+    mail "attachments_added", :subject => "[#{container.project.name}] #{l(:label_attachment_new)}", :to => recipients
   end
   
   # Builds a tmail object used to email recipients of a news' project when a news item is added.
@@ -145,7 +144,7 @@ class Mailer < ActionMailer::Base
 
     @news = news
     @news_url = url_for(:controller => 'news', :action => 'show', :id => news)
-    mail :message_id => news,
+    mail "news_added", :message_id => news,
       :to => news.recipients,
       :subject => "[#{news.project.name}] #{l(:label_news)}: #{news.title}"
   end
@@ -161,7 +160,7 @@ class Mailer < ActionMailer::Base
     @news = news
     @comment = comment
     @news_url = url_for(:controller => 'news', :action => 'show', :id => news)
-    mail :message_id => comment,
+    mail "news_comment_added", :message_id => comment,
       :to => news.recipients,
       :cc => news.watcher_recipients,
       :subject => "Re: [#{news.project.name}] #{l(:label_news)}: #{news.title}"
@@ -178,7 +177,7 @@ class Mailer < ActionMailer::Base
     @message = message
     @message_url = url_for(message.event_url)
 
-    mail :message_id => message,
+    mail "message_posted", :message_id => message,
       :references => message.parent,
       :to => message.recipients,
       :cc => ((message.root.watcher_recipients + message.board.watcher_recipients).uniq - message.recipients),
@@ -196,7 +195,7 @@ class Mailer < ActionMailer::Base
 
     @wiki_content = wiki_content
     @wiki_content_url = url_for(:controller => 'wiki', :action => 'show', :project_id => wiki_content.project, :id => wiki_content.page.title)
-    mail :message_id => wiki_content,
+    mail "wiki_content_added", :message_id => wiki_content,
       :to => wiki_content.recipients,
       :cc => (wiki_content.page.wiki.watcher_recipients - wiki_content.recipients),
       :subject => "[#{wiki_content.project.name}] #{l(:mail_subject_wiki_content_added, :id => wiki_content.page.pretty_title)}"
@@ -213,7 +212,7 @@ class Mailer < ActionMailer::Base
     @wiki_content = wiki_content
     @wiki_content_url = url_for(:controller => 'wiki', :action => 'show', :project_id => wiki_content.project, :id => wiki_content.page.title)
     @wiki_diff_url = url_for(:controller => 'wiki', :action => 'diff', :project_id => wiki_content.project, :id => wiki_content.page.title, :version => wiki_content.version)
-    mail :message_id => wiki_content,
+    mail "wiki_content_updated", :message_id => wiki_content,
       :to => wiki_content.recipients,
       :cc => (wiki_content.page.wiki.watcher_recipients + wiki_content.page.watcher_recipients - wiki_content.recipients),
       :subject => "[#{wiki_content.project.name}] #{l(:mail_subject_wiki_content_updated, :id => wiki_content.page.pretty_title)}",
@@ -230,7 +229,7 @@ class Mailer < ActionMailer::Base
     @user = user
     @password = password
     @login_url = url_for(:controller => 'account', :action => 'login')
-    mail :to => user.mail,
+    mail "account_information", :to => user.mail,
       :subject => l(:mail_subject_register, Setting.app_title),
   end
 
@@ -244,7 +243,7 @@ class Mailer < ActionMailer::Base
     @user = user
     @url = url_for(:controller => 'users', :action => 'index', :status => User::STATUS_REGISTERED, :sort_key => 'created_on', :sort_order => 'desc')
 
-    mail :to => User.active.find(:all, :conditions => {:admin => true}).collect { |u| u.mail }.compact,
+    mail "account_activation_request", :to => User.active.find(:all, :conditions => {:admin => true}).collect { |u| u.mail }.compact,
       :subject => l(:mail_subject_account_activation_request, Setting.app_title)
   end
 
@@ -257,7 +256,7 @@ class Mailer < ActionMailer::Base
     set_language_if_valid user.language
     @user = user
     @login_url = url_for(:controller => 'account', :action => 'login')
-    mail :to => user.mail,
+    mail "account_activated", :to => user.mail,
       :subject => l(:mail_subject_register, Setting.app_title)
   end
 
@@ -266,7 +265,7 @@ class Mailer < ActionMailer::Base
 
     @token = token
     @url = url_for(:controller => 'account', :action => 'lost_password', :token => token.value)
-    mail :to => token.user.mail,
+    mail "lost_password", :to => token.user.mail,
       :subject => l(:mail_subject_lost_password, Setting.app_title),
   end
 
@@ -275,7 +274,7 @@ class Mailer < ActionMailer::Base
 
     @token = token
     @url = url_for(:controller => 'account', :action => 'activate', :token => token.value)
-    mail :to => token.user.mail,
+    mail "register", :to => token.user.mail,
       :subject => l(:mail_subject_register, Setting.app_title)
   end
 
@@ -283,7 +282,7 @@ class Mailer < ActionMailer::Base
     set_language_if_valid(user.language)
 
     @url = url_for(:controller => 'welcome')
-    mail :to => user.mail,
+    mail "test", :to => user.mail,
       :subject => 'Redmine test'
   end
 
@@ -343,7 +342,7 @@ class Mailer < ActionMailer::Base
   end
 
   alias :mail_without_default_settings :mail
-  def mail(attributes)
+  def mail(method_name, attributes)
     attributes[:from] = Setting.mail_from
     
     @author ||= User.current
@@ -369,18 +368,17 @@ class Mailer < ActionMailer::Base
       attributes[:message_id] = self.class.message_id_for(attributes[:message_id])
     end
     if attributes[:references]
-      attributes[:references] = [self.class.message_id_for(attributes[:references])]
-    end
-    
-    if Setting.plain_text_mail?
-      # fixme
+      attributes[:references] = self.class.message_id_for(attributes[:references])
     end
     
     # Log errors when raise_delivery_errors is set to false, Rails does not
     raise_errors = self.class.raise_delivery_errors
     self.class.raise_delivery_errors = true
     begin
-      mail_without_default_settings(attributes)
+      mail_without_default_settings(attributes) do |format|
+        format.text { render :file  => "#{method_name}.text.plain.rhtml", :layout => 'mailer.text.plain.rhtml' }
+        format.html { render :file => "#{method_name}.text.html.rhtml", :layout => 'mailer.text.html.rhtml' } if !Setting.plain_text_mail?
+      end
     rescue Exception => e
       if raise_errors
         raise e
@@ -391,11 +389,6 @@ class Mailer < ActionMailer::Base
       self.class.raise_delivery_errors = raise_errors
     end
   end
-
-  # Makes partial rendering work with Rails 1.2 (retro-compatibility)
-  def self.controller_path
-    ''
-  end unless respond_to?('controller_path')
   
   # Returns a predictable Message-Id for the given object
   def self.message_id_for(object)

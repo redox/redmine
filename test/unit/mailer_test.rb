@@ -38,7 +38,7 @@ class MailerTest < ActiveSupport::TestCase
     assert Mailer.issue_edit(journal).deliver
     
     mail = ActionMailer::Base.deliveries.last
-    assert_kind_of TMail::Mail, mail
+    assert_kind_of Mail::Message, mail
     
     assert_select_email do
       # link to the main ticket
@@ -60,7 +60,7 @@ class MailerTest < ActiveSupport::TestCase
     assert Mailer.issue_edit(journal).deliver
     
     mail = ActionMailer::Base.deliveries.last
-    assert_kind_of TMail::Mail, mail
+    assert_kind_of Mail::Message, mail
 
     assert_select_email do
       # link to the main ticket
@@ -85,7 +85,7 @@ class MailerTest < ActiveSupport::TestCase
     assert Mailer.issue_edit(journal).deliver
     
     mail = ActionMailer::Base.deliveries.last
-    assert_kind_of TMail::Mail, mail
+    assert_kind_of Mail::Message, mail
 
     assert_select_email do
       # link to the main ticket
@@ -105,8 +105,8 @@ class MailerTest < ActiveSupport::TestCase
     Mailer.issue_add(issue).deliver
     mail = ActionMailer::Base.deliveries.last
     assert_not_nil mail
-    assert_equal 'bulk', mail.header_string('Precedence')
-    assert_equal 'auto-generated', mail.header_string('Auto-Submitted')
+    assert_equal 'bulk', mail.headers['Precedence']
+    assert_equal 'auto-generated', mail.headers['Auto-Submitted']
   end
 
   def test_plain_text_mail
@@ -114,7 +114,7 @@ class MailerTest < ActiveSupport::TestCase
     journal = Journal.find(2)
     Mailer.issue_edit(journal).deliver
     mail = ActionMailer::Base.deliveries.last
-    assert_equal "text/plain", mail.content_type
+    assert_equal "text/plain; charset=UTF-8", mail.content_type
     assert_equal 0, mail.parts.size
     assert !mail.encoded.include?('href')
   end
@@ -134,7 +134,7 @@ class MailerTest < ActiveSupport::TestCase
     end
     mail = ActionMailer::Base.deliveries.last
     assert_not_nil mail
-    assert_equal 'Redmine app', mail.from_addrs.first.name
+    assert_equal 'redmine@example.net', mail.from_addrs.first
   end
   
   def test_should_not_send_email_without_recipient
@@ -163,7 +163,7 @@ class MailerTest < ActiveSupport::TestCase
     Mailer.issue_add(issue).deliver
     mail = ActionMailer::Base.deliveries.last
     assert_not_nil mail
-    assert_equal Mailer.message_id_for(issue), mail.message_id
+    assert_equal Mailer.message_id_for(issue), "<" + mail.message_id + ">"
     assert_nil mail.references
   end
   
@@ -172,8 +172,8 @@ class MailerTest < ActiveSupport::TestCase
     Mailer.issue_edit(journal).deliver
     mail = ActionMailer::Base.deliveries.last
     assert_not_nil mail
-    assert_equal Mailer.message_id_for(journal), mail.message_id
-    assert_equal Mailer.message_id_for(journal.issue), mail.references.first.to_s
+    assert_equal Mailer.message_id_for(journal), "<" + mail.message_id + ">"
+    assert_equal Mailer.message_id_for(journal.issue), "<" + mail.references + ">"
   end
   
   def test_message_posted_message_id
@@ -181,7 +181,7 @@ class MailerTest < ActiveSupport::TestCase
     Mailer.message_posted(message).deliver
     mail = ActionMailer::Base.deliveries.last
     assert_not_nil mail
-    assert_equal Mailer.message_id_for(message), mail.message_id
+    assert_equal Mailer.message_id_for(message), "<" + mail.message_id + ">"
     assert_nil mail.references
     assert_select_email do
       # link to the message
@@ -194,8 +194,8 @@ class MailerTest < ActiveSupport::TestCase
     Mailer.message_posted(message).deliver
     mail = ActionMailer::Base.deliveries.last
     assert_not_nil mail
-    assert_equal Mailer.message_id_for(message), mail.message_id
-    assert_equal Mailer.message_id_for(message.parent), mail.references.first.to_s
+    assert_equal Mailer.message_id_for(message), "<" + mail.message_id + ">"
+    assert_equal Mailer.message_id_for(message.parent), "<" + mail.references + ">"
     assert_select_email do
       # link to the reply
       assert_select "a[href=?]", "http://mydomain.foo/boards/#{message.board.id}/topics/#{message.root.id}?r=#{message.id}#message-#{message.id}", :text => message.subject
@@ -370,7 +370,7 @@ class MailerTest < ActiveSupport::TestCase
       ActionMailer::Base.deliveries.clear
       assert Mailer.register(token).deliver
       mail = ActionMailer::Base.deliveries.last
-      assert mail.body.include?("https://redmine.foo/account/activate?token=#{token.value}")
+      assert mail.body.encoded.include?("https://redmine.foo/account/activate?token=#{token.value}")
     end
   end
   
@@ -387,7 +387,7 @@ class MailerTest < ActiveSupport::TestCase
     assert_equal 1, ActionMailer::Base.deliveries.size
     mail = ActionMailer::Base.deliveries.last
     assert mail.bcc.include?('dlopper@somenet.foo')
-    assert mail.body.include?('Bug #3: Error 281 when updating a recipe')
+    assert mail.body.encoded.include?('Bug #3: Error 281 when updating a recipe')
     assert_equal '1 issue(s) due in the next 42 days', mail.subject
   end
   
@@ -398,7 +398,7 @@ class MailerTest < ActiveSupport::TestCase
     assert_equal 1, ActionMailer::Base.deliveries.size # No mail for dlopper
     mail = ActionMailer::Base.deliveries.last
     assert mail.bcc.include?('dlopper@somenet.foo')
-    assert mail.body.include?('Bug #3: Error 281 when updating a recipe')
+    assert mail.body.encoded.include?('Bug #3: Error 281 when updating a recipe')
   end
   
   def last_email
@@ -416,7 +416,7 @@ class MailerTest < ActiveSupport::TestCase
     user.language = 'fr'
     Mailer.account_activated(user).deliver
     mail = ActionMailer::Base.deliveries.last
-    assert mail.body.include?('Votre compte')
+    assert mail.body.encoded.include?('Votre compte')
     
     assert_equal :it, current_language
   end
