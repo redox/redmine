@@ -91,10 +91,6 @@ class Changeset < ActiveRecord::Base
     self.user = repository.find_committer_user(self.committer)
   end
 
-  def scan_for_issues
-    scan_comment_for_issue_ids
-  end
-
   TIMELOG_RE = /
     (
     ((\d+)(h|hours?))((\d+)(m|min)?)?
@@ -198,7 +194,7 @@ class Changeset < ActiveRecord::Base
   def fix_issue(issue)
     status = IssueStatus.find_by_id(Setting.commit_fix_status_id.to_i)
     if status.nil?
-      logger.warn("No status macthes commit_fix_status_id setting (#{Setting.commit_fix_status_id})") if logger
+      logger.warn("No status matches commit_fix_status_id setting (#{Setting.commit_fix_status_id})") if logger
       return issue
     end
 
