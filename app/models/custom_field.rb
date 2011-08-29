@@ -24,7 +24,7 @@ class CustomField < ActiveRecord::Base
   validates_uniqueness_of :name, :scope => :type
   validates_length_of :name, :maximum => 30
   validates_inclusion_of :field_format, :in => Redmine::CustomFieldFormat.available_formats
-  validate :validate_possible_values, :validate_default_value
+  validate :validate_possible_values, :validate_default_value, :validate_regexp
   
   before_validation :lock_fields
   
@@ -34,26 +34,6 @@ class CustomField < ActiveRecord::Base
     # make sure these fields are not searchable
     self.searchable = false if %w(int float date bool).include?(field_format)
     true
-  end
-
-  def validate
-    if self.field_format == "list"
-      errors.add(:possible_values, :blank) if self.possible_values.nil? || self.possible_values.empty?
-      errors.add(:possible_values, :invalid) unless self.possible_values.is_a? Array
-    end
-
-    if regexp.present?
-      begin
-        Regexp.new(regexp)
-      rescue
-        errors.add(:regexp, :invalid)
-      end
-    end
-
-    # validate default value
-    v = CustomValue.new(:custom_field => self.clone, :value => default_value, :customized => nil)
-    v.custom_field.is_required = false
-    errors.add(:default_value, :invalid) unless v.valid?
   end
 
   def possible_values_options(obj=nil)
@@ -170,6 +150,16 @@ private
     v = CustomValue.new(:custom_field => self.clone, :value => default_value, :customized => nil)
     v.custom_field.is_required = false
     errors.add(:default_value, :invalid) unless v.valid?
+  end
+  
+  def validate_regexp
+    if regexp.present?
+      begin
+        Regexp.new(regexp)
+      rescue
+        errors.add(:regexp, :invalid)
+      end
+    end
   end
   
   def init_possible_values
