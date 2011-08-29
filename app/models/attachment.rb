@@ -47,7 +47,7 @@ class Attachment < ActiveRecord::Base
   @@storage_path = Redmine::Configuration['attachments_storage_path'] || "#{Rails.root}/files"
 
   after_destroy :delete_from_disk
-  before_save :files_to_final_location
+  before_create :files_to_final_location
 
   def file=(incoming_file)
     unless incoming_file.nil?
