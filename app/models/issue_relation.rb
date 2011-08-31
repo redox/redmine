@@ -43,6 +43,8 @@ class IssueRelation < ActiveRecord::Base
   validate :validate_issue_relation
   
   attr_protected :issue_from_id, :issue_to_id
+  
+  after_initialize :init_relation_type
 
   def visible?(user=User.current)
     (issue_from.nil? || issue_from.visible?(user)) && (issue_to.nil? || issue_to.visible?(user))
@@ -52,28 +54,6 @@ class IssueRelation < ActiveRecord::Base
     visible?(user) &&
       ((issue_from.nil? || user.allowed_to?(:manage_issue_relations, issue_from.project)) ||
         (issue_to.nil? || user.allowed_to?(:manage_issue_relations, issue_to.project)))
-  end
-
-  def after_initialize
-    if new_record?
-      if relation_type.blank?
-        self.relation_type = IssueRelation::TYPE_RELATES
-      end
-    end
-  end
-
-  def validate
-    if issue_from && issue_to
-      errors.add :issue_to_id, :invalid if issue_from_id == issue_to_id
-      errors.add :issue_to_id, :not_same_project unless issue_from.project_id == issue_to.project_id || Setting.cross_project_issue_relations?
-      #detect circular dependencies depending wether the relation should be reversed
-      if TYPES.has_key?(relation_type) && TYPES[relation_type][:reverse]
-        errors.add_to_base :circular_dependency if issue_from.all_dependent_issues.include? issue_to
-      else
-        errors.add_to_base :circular_dependency if issue_to.all_dependent_issues.include? issue_from
-      end
-      errors.add_to_base :cant_link_an_issue_with_a_descendant if issue_from.is_descendant_of?(issue_to) || issue_from.is_ancestor_of?(issue_to)
-    end
   end
 
   before_save :handle_issue_order
@@ -132,9 +112,18 @@ class IssueRelation < ActiveRecord::Base
     if issue_from && issue_to
       errors.add :issue_to_id, :invalid if issue_from_id == issue_to_id
       errors.add :issue_to_id, :not_same_project unless issue_from.project_id == issue_to.project_id || Setting.cross_project_issue_relations?
-      errors[:base] << :circular_dependency if issue_to.all_dependent_issues.include? issue_from
+      #detect circular dependencies depending wether the relation should be reversed
+      if TYPES.has_key?(relation_type) && TYPES[relation_type][:reverse]
+        errors[:base] << :circular_dependency if issue_from.all_dependent_issues.include? issue_to
+      else
+        errors[:base] << :circular_dependency if issue_to.all_dependent_issues.include? issue_from
+      end
       errors[:base] << :cant_link_an_issue_with_a_descendant if issue_from.is_descendant_of?(issue_to) || issue_from.is_ancestor_of?(issue_to)
     end
+  end
+  
+  def init_relation_type
+    self.relation_type = IssueRelation::TYPE_RELATES if relation_type.blank?
   end
   
   def handle_issue_order
