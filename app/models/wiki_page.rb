@@ -143,7 +143,7 @@ class WikiPage < ActiveRecord::Base
   end
 
   protected
-  
+
   def validate_parent_title
     errors.add(:parent_title, :invalid) if !@parent_title.blank? && parent.nil?
     errors.add(:parent_title, :circular_dependency) if parent && (parent == self || parent.ancestors.include?(self))

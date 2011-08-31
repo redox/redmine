@@ -86,7 +86,7 @@ class User < Principal
     group_id = group.is_a?(Group) ? group.id : group.to_i
     { :conditions => ["#{User.table_name}.id NOT IN (SELECT gu.user_id FROM #{table_name_prefix}groups_users#{table_name_suffix} gu WHERE gu.group_id = ?)", group_id] }
   }
-  
+
   def set_mail_notification
     self.mail_notification = Setting.default_notification_option if self.mail_notification.blank?
     true
