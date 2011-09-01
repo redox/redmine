@@ -126,7 +126,7 @@ class MailHandler < ActionMailer::Base
       raise UnauthorizedAction unless user.allowed_to?(:add_issues, project)
     end
 
-    issue = Issue.new(:author => user, :project => project)
+    issue = Issue.new(:author => user, :project => project, :status_id => 1, :priority => IssuePriority.all.first)
     issue.safe_attributes = issue_attributes_from_keywords(issue)
     issue.safe_attributes = {'custom_field_values' => custom_field_values_from_keywords(issue)}
     issue.subject = email.subject.to_s.chomp[0,255]
@@ -262,7 +262,7 @@ class MailHandler < ActionMailer::Base
   # Returns a Hash of issue attributes extracted from keywords in the email body
   def issue_attributes_from_keywords(issue)
     assigned_to = (k = get_keyword(:assigned_to, :override => true)) && find_assignee_from_keyword(k, issue)
-
+    
     attrs = {
       'tracker_id' => (k = get_keyword(:tracker)) && issue.project.trackers.named(k).first.try(:id),
       'status_id' =>  (k = get_keyword(:status)) && IssueStatus.named(k).first.try(:id),
