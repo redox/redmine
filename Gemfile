@@ -22,6 +22,6 @@ end
 
 group :test do
   gem 'test-unit'
-  gem 'shoulda'
+  gem "shoulda", :git => "http://github.com/redox/shoulda", :branch => "rails3"
   gem 'mocha'
 end
