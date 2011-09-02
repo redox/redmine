@@ -66,17 +66,17 @@ class AdminControllerTest < ActionController::TestCase
 
   def test_load_default_configuration_data
     delete_configuration_data
-    post :default_configuration, :lang => 'fr'
+    post :default_configuration, :lang => 'en'
     assert_response :redirect
     assert_nil flash[:error]
-    assert IssueStatus.find_by_name('Nouveau')
+    assert IssueStatus.find_by_name('New')
   end
 
   def test_test_email
     get :test_email
     assert_redirected_to '/settings/edit?tab=notifications'
     mail = ActionMailer::Base.deliveries.last
-    assert_kind_of TMail::Mail, mail
+    assert_kind_of Mail::Message, mail
     user = User.find(1)
     assert_equal [user.mail], mail.bcc
   end
