@@ -37,7 +37,7 @@ class CustomField < ActiveRecord::Base
   end
 
   def possible_values_options(obj=nil)
-    case field_format
+    case (field_format rescue nil) # MissingAttributeError
     when 'user', 'version'
       if obj.respond_to?(:project) && obj.project
         case field_format
@@ -57,7 +57,7 @@ class CustomField < ActiveRecord::Base
   end
 
   def possible_values(obj=nil)
-    case field_format
+    case (field_format rescue nil) # MissingAttributeError
     when 'user', 'version'
       possible_values_options(obj).collect(&:last)
     else
@@ -163,6 +163,6 @@ private
   end
   
   def init_possible_values
-    self.possible_values = []
+    self.possible_values ||= []
   end
 end
