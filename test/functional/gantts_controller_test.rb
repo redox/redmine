@@ -10,7 +10,7 @@ class GanttsControllerTest < ActionController::TestCase
 
       get :show, :project_id => 1
       assert_response :success
-      assert_template 'show.html.erb'
+      assert_template 'gantts/show'
       assert_not_nil assigns(:gantt)
       # Issue with start and due dates
       i = Issue.find(1)
@@ -26,7 +26,7 @@ class GanttsControllerTest < ActionController::TestCase
 
       get :show, :project_id => 1
       assert_response :success
-      assert_template 'show.html.erb'
+      assert_template 'gantts/show'
       assert_not_nil assigns(:gantt)
     end
 
@@ -36,14 +36,14 @@ class GanttsControllerTest < ActionController::TestCase
 
       get :show, :project_id => 1
       assert_response :success
-      assert_template 'show.html.erb'
+      assert_template 'gantts/show'
       assert_not_nil assigns(:gantt)
     end
 
     should "work cross project" do
       get :show
       assert_response :success
-      assert_template 'show.html.erb'
+      assert_template 'gantts/show'
       assert_not_nil assigns(:gantt)
       assert_not_nil assigns(:gantt).query
       assert_nil assigns(:gantt).project
@@ -52,7 +52,7 @@ class GanttsControllerTest < ActionController::TestCase
     should "not disclose private projects" do
       get :show
       assert_response :success
-      assert_template 'show.html.erb'
+      assert_template 'gantts/show'
 
       assert_tag 'a', :content => /eCookbook/
       # Root private project
