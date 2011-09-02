@@ -69,8 +69,7 @@ module QueriesHelper
     if !params[:query_id].blank?
       cond = "project_id IS NULL"
       cond << " OR project_id = #{@project.id}" if @project
-      @query = Query.find(params[:query_id], :conditions => cond)
-      raise ::Unauthorized unless @query.visible?
+      @query = Query.visible.find(params[:query_id], :conditions => cond)
       @query.project = @project
       session[:query] = {:id => @query.id, :project_id => @query.project_id}
       sort_clear
