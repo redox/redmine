@@ -28,7 +28,7 @@ class RepositoryCvsTest < ActiveSupport::TestCase
 
   def setup
     @project = Project.find(3)
-    @repository = Repository::Cvs.create(:project  => @project,
+    @repository = Cvs.create(:project  => @project,
                                          :root_url => REPOSITORY_PATH,
                                          :url      => MODULE_NAME,
                                          :log_encoding => 'UTF-8')
