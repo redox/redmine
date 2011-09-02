@@ -163,6 +163,6 @@ private
   end
   
   def init_possible_values
-    self.possible_values ||= []
+    self.possible_values = []
   end
 end
