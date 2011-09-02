@@ -306,6 +306,8 @@ private
       @issue = @project.issues.visible.find(params[:id])
     end
 
+    @issue.status_id = 1
+    @issue.priority = IssuePriority.all.first
     @issue.project = @project
     @issue.author = User.current
     # Tracker must be set before custom field values

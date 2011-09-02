@@ -215,13 +215,13 @@ class IssuesControllerTest < ActionController::TestCase
     get :index, :format => 'csv'
     assert_response :success
     assert_not_nil assigns(:issues)
-    assert_equal 'text/csv', @response.content_type
+    assert_equal 'text/csv; header=present', @response.content_type
     assert @response.body.starts_with?("#,")
 
     get :index, :project_id => 1, :format => 'csv'
     assert_response :success
     assert_not_nil assigns(:issues)
-    assert_equal 'text/csv', @response.content_type
+    assert_equal 'text/csv; header=present', @response.content_type
   end
 
   def test_index_pdf
@@ -308,7 +308,7 @@ class IssuesControllerTest < ActionController::TestCase
 
   def test_index_send_nothing_if_query_is_invalid
     get :index, :f => ['start_date'], :op => {:start_date => '='}, :format => 'csv'
-    assert_equal 'text/csv', @response.content_type
+    assert @response.content_type.include?('text/csv')
     assert @response.body.blank?
   end
 
@@ -448,7 +448,7 @@ class IssuesControllerTest < ActionController::TestCase
   def test_show_atom
     get :show, :id => 2, :format => 'atom'
     assert_response :success
-    assert_template 'journals/index.rxml'
+    assert_template 'journals/index'
     # Inline image
     assert_select 'content', :text => Regexp.new(Regexp.quote('http://test.host/attachments/download/10'))
   end
@@ -643,7 +643,7 @@ class IssuesControllerTest < ActionController::TestCase
     assert_template 'new'
     issue = assigns(:issue)
     assert_not_nil issue
-    assert_equal I18n.translate('activerecord.errors.messages.invalid'), issue.errors.on(:custom_values)
+    assert_equal I18n.translate('activerecord.errors.messages.invalid'), issue.errors[:custom_values].join(",")
   end
 
   def test_post_create_with_watchers
@@ -1045,7 +1045,7 @@ class IssuesControllerTest < ActionController::TestCase
     mail = ActionMailer::Base.deliveries.last
     assert_kind_of Mail::Message, mail
     assert mail.subject.starts_with?("[#{issue.project.name} - #{issue.tracker.name} ##{issue.id}]")
-    assert mail.body.include?("Subject changed from #{old_subject} to #{new_subject}")
+    assert mail.body.encoded.include?("Subject changed from #{old_subject} to #{new_subject}")
   end
 
   def test_put_update_with_custom_field_change
@@ -1068,7 +1068,7 @@ class IssuesControllerTest < ActionController::TestCase
 
     mail = ActionMailer::Base.deliveries.last
     assert_kind_of Mail::Message, mail
-    assert mail.body.include?("Searchable field changed from 125 to New custom value")
+    assert mail.body.encoded.include?("Searchable field changed from 125 to New custom value")
   end
 
   def test_put_update_with_status_and_assignee_change
@@ -1090,7 +1090,7 @@ class IssuesControllerTest < ActionController::TestCase
     assert_equal 2, j.details.size
 
     mail = ActionMailer::Base.deliveries.last
-    assert mail.body.include?("Status changed from New to Assigned")
+    assert mail.body.encoded.include?("Status changed from New to Assigned")
     # subject should contain the new status
     assert mail.subject.include?("(#{ IssueStatus.find(2).name })")
   end
@@ -1108,7 +1108,7 @@ class IssuesControllerTest < ActionController::TestCase
     assert_equal User.anonymous, j.user
 
     mail = ActionMailer::Base.deliveries.last
-    assert mail.body.include?(notes)
+    assert mail.body.encoded.include?(notes)
   end
 
   def test_put_update_with_note_and_spent_time
@@ -1166,7 +1166,7 @@ class IssuesControllerTest < ActionController::TestCase
     assert_equal 59, File.size(attachment.diskfile)
 
     mail = ActionMailer::Base.deliveries.last
-    assert mail.body.include?('testfile.txt')
+    assert mail.body.encoded.include?('testfile.txt')
   end
 
   def test_put_update_with_attachment_that_fails_to_save
