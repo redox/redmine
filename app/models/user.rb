@@ -525,8 +525,8 @@ class User < Principal
   def self.anonymous
     anonymous_user = AnonymousUser.find(:first)
     if anonymous_user.nil?
-      anonymous_user = AnonymousUser.create(:lastname => 'Anonymous', :firstname => '', :mail => '', :login => '', :status => 0)
-      raise 'Unable to create the anonymous user.' if anonymous_user.new_record?
+      anonymous_user = AnonymousUser.new(:lastname => 'Anonymous', :firstname => '', :mail => '', :login => '', :status => 0)
+      raise 'Unable to create the anonymous user.' unless anonymous_user.save
     end
     anonymous_user
   end
@@ -572,8 +572,8 @@ class User < Principal
     Message.update_all ['author_id = ?', substitute.id], ['author_id = ?', id]
     News.update_all ['author_id = ?', substitute.id], ['author_id = ?', id]
     # Remove private queries and keep public ones
-    Query.delete_all ['user_id = ? AND is_public = ?', id, false]
-    Query.update_all ['user_id = ?', substitute.id], ['user_id = ?', id]
+    ::Query.delete_all ['user_id = ? AND is_public = ?', id, false]
+    ::Query.update_all ['user_id = ?', substitute.id], ['user_id = ?', id]
     TimeEntry.update_all ['user_id = ?', substitute.id], ['user_id = ?', id]
     Token.delete_all ['user_id = ?', id]
     Watcher.delete_all ['user_id = ?', id]

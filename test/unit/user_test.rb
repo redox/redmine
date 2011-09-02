@@ -46,7 +46,7 @@ class UserTest < ActiveSupport::TestCase
     u = User.new
     u.mail = ''
     assert !u.valid?
-    assert_equal I18n.translate('activerecord.errors.messages.blank'), u.errors.on(:mail)
+    assert_equal I18n.translate('activerecord.errors.messages.blank'), u.errors[:mail].join(",")
   end
 
   def test_create
@@ -91,7 +91,7 @@ class UserTest < ActiveSupport::TestCase
       u.login = 'NewUser'
       u.password, u.password_confirmation = "password", "password"
       assert !u.save
-      assert_equal I18n.translate('activerecord.errors.messages.taken'), u.errors.on(:login)
+      assert_equal I18n.translate('activerecord.errors.messages.taken'), u.errors[:login].join(",")
     end
   end
 
@@ -105,7 +105,7 @@ class UserTest < ActiveSupport::TestCase
     u.login = 'newuser2'
     u.password, u.password_confirmation = "password", "password"
     assert !u.save
-    assert_equal I18n.translate('activerecord.errors.messages.taken'), u.errors.on(:mail)
+    assert_equal I18n.translate('activerecord.errors.messages.taken'), u.errors[:mail].join(",")
   end
 
   def test_update
@@ -154,7 +154,7 @@ class UserTest < ActiveSupport::TestCase
   end
 
   def test_destroy_should_update_issues
-    issue = Issue.create!(:project_id => 1, :author_id => 2, :tracker_id => 1, :subject => 'foo')
+    issue = Issue.create!(:project_id => 1, :author_id => 2, :tracker_id => 1, :subject => 'foo', :status_id => 1, :priority => IssuePriority.all.first)
 
     User.find(2).destroy
     assert_nil User.find_by_id(2)
@@ -162,7 +162,7 @@ class UserTest < ActiveSupport::TestCase
   end
 
   def test_destroy_should_unassign_issues
-    issue = Issue.create!(:project_id => 1, :author_id => 1, :tracker_id => 1, :subject => 'foo', :assigned_to_id => 2)
+    issue = Issue.create!(:project_id => 1, :author_id => 1, :tracker_id => 1, :subject => 'foo', :assigned_to_id => 2, :status_id => 1, :priority => IssuePriority.all.first)
 
     User.find(2).destroy
     assert_nil User.find_by_id(2)
@@ -170,7 +170,7 @@ class UserTest < ActiveSupport::TestCase
   end
 
   def test_destroy_should_update_journals
-    issue = Issue.create!(:project_id => 1, :author_id => 2, :tracker_id => 1, :subject => 'foo')
+    issue = Issue.create!(:project_id => 1, :author_id => 2, :tracker_id => 1, :subject => 'foo', :status_id => 1, :priority => IssuePriority.all.first)
     issue.init_journal(User.find(2), "update")
     issue.save!
 
@@ -180,7 +180,7 @@ class UserTest < ActiveSupport::TestCase
   end
 
   def test_destroy_should_update_journal_details_old_value
-    issue = Issue.create!(:project_id => 1, :author_id => 1, :tracker_id => 1, :subject => 'foo', :assigned_to_id => 2)
+    issue = Issue.create!(:project_id => 1, :author_id => 1, :tracker_id => 1, :subject => 'foo', :assigned_to_id => 2, :status_id => 1, :priority => IssuePriority.all.first)
     issue.init_journal(User.find(1), "update")
     issue.assigned_to_id = nil
     assert_difference 'JournalDetail.count' do
@@ -195,7 +195,7 @@ class UserTest < ActiveSupport::TestCase
   end
 
   def test_destroy_should_update_journal_details_value
-    issue = Issue.create!(:project_id => 1, :author_id => 1, :tracker_id => 1, :subject => 'foo')
+    issue = Issue.create!(:project_id => 1, :author_id => 1, :tracker_id => 1, :subject => 'foo', :status_id => 1, :priority => IssuePriority.all.first)
     issue.init_journal(User.find(1), "update")
     issue.assigned_to_id = 2
     assert_difference 'JournalDetail.count' do
@@ -227,7 +227,7 @@ class UserTest < ActiveSupport::TestCase
   end
 
   def test_destroy_should_delete_private_queries
-    query = Query.new(:name => 'foo', :is_public => false)
+    query = ::Query.new(:name => 'foo', :is_public => false)
     query.project_id = 1
     query.user_id = 2
     query.save!
@@ -238,7 +238,7 @@ class UserTest < ActiveSupport::TestCase
   end
 
   def test_destroy_should_update_public_queries
-    query = Query.new(:name => 'foo', :is_public => true)
+    query = ::Query.new(:name => 'foo', :is_public => true)
     query.project_id = 1
     query.user_id = 2
     query.save!
@@ -268,7 +268,7 @@ class UserTest < ActiveSupport::TestCase
   end
 
   def test_destroy_should_delete_watchers
-    issue = Issue.create!(:project_id => 1, :author_id => 1, :tracker_id => 1, :subject => 'foo')
+    issue = Issue.create!(:project_id => 1, :author_id => 1, :tracker_id => 1, :subject => 'foo', :status_id => 1, :priority => IssuePriority.all.first)
     watcher = Watcher.create!(:user_id => 2, :watchable => issue)
 
     User.find(2).destroy
@@ -305,7 +305,7 @@ class UserTest < ActiveSupport::TestCase
 
   def test_destroy_should_nullify_changesets
     changeset = Changeset.create!(
-      :repository => Repository::Subversion.create!(
+      :repository => Subversion.create!(
         :project_id => 1,
         :url => 'file:///var/svn'
       ),
@@ -336,7 +336,7 @@ class UserTest < ActiveSupport::TestCase
     u = User.new
     u.mail_notification = 'foo'
     u.save
-    assert_not_nil u.errors.on(:mail_notification)
+    assert_not_nil u.errors[:mail_notification]
   end
 
   context "User#try_to_login" do
