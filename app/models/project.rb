@@ -86,7 +86,9 @@ class Project < ActiveRecord::Base
   scope :all_public, { :conditions => { :is_public => true } }
   scope :visible, lambda {|*args| {:conditions => Project.visible_condition(args.shift || User.current, *args) }}
   
-  def after_initialize
+  def initialize(attributes = nil, options = {})
+    super(attributes, options)
+    return if !new_record?
     initialized = (attributes || {}).stringify_keys
     if !initialized.key?('identifier') && Setting.sequential_project_identifiers?
       self.identifier = Project.next_identifier
@@ -101,7 +103,7 @@ class Project < ActiveRecord::Base
       self.trackers = Tracker.all
     end
   end
-
+  
   def identifier=(identifier)
     super unless identifier_frozen?
   end
@@ -870,7 +872,7 @@ class Project < ActiveRecord::Base
         self.time_entry_activities.active
     end
   end
-
+  
   # Archives subprojects recursively
   def archive!
     children.each do |subproject|
