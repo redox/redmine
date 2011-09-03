@@ -5,6 +5,7 @@ gem 'i18n'
 gem 'coderay'
 gem "rake", '0.8.7'
 gem 'prototype-rails', :git => 'git://github.com/rails/prototype-rails.git'
+gem 'dynamic_form', :git => 'git://github.com/rails/dynamic_form.git'
 gem "rmagick"
 gem "mysql"
 gem "mysql2"
