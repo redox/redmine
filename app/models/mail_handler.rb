@@ -246,8 +246,8 @@ class MailHandler < ActionMailer::Base
     keys.reject! {|k| k.blank?}
     keys.collect! {|k| Regexp.escape(k)}
     format ||= '.+'
-    text.gsub!(/^(#{keys.join('|')})[ \t]*:[ \t]*(#{format})\s*$/i, '')
-    $2 && $2.strip
+    v = text.scan(/^(#{keys.join('|')})[ \t]*:[ \t]*(#{format})\s*$/i)
+    v[0] && v[0][1].strip
   end
 
   def target_project
