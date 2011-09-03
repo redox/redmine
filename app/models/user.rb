@@ -249,7 +249,7 @@ class User < Principal
   end
 
   def pref
-    self.preference ||= UserPreference.new(:user => self)
+    self.preference ||= build_preference
   end
 
   def time_zone
@@ -588,7 +588,7 @@ class User < Principal
 
   # Returns a 128bits random salt as a hex string (32 chars long)
   def self.generate_salt
-    ActiveSupport::SecureRandom.hex(16)
+    SecureRandom.hex(16)
   end
 end
 
