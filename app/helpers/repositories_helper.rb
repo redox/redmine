@@ -160,7 +160,7 @@ module RepositoriesHelper
     Redmine::Scm::Base.all.each do |scm|
     if Setting.enabled_scm.include?(scm) ||
           (repository && repository.class.name.demodulize == scm)
-        scm_options << ["Repository::#{scm}".constantize.scm_name, scm]
+        scm_options << [scm.constantize.scm_name, scm]
       end
     end
     select_tag('repository_scm',
