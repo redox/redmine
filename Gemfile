@@ -4,7 +4,7 @@ gem 'rails', '3.1.0'
 gem 'i18n'
 gem 'coderay'
 gem "rake", '0.8.7'
-gem 'prototype-rails', :git => 'git://github.com/rubychan/prototype-rails.git'
+gem 'prototype-rails', :git => 'git://github.com/rails/prototype-rails.git'
 gem "rmagick"
 gem "mysql"
 gem "mysql2"
