@@ -270,7 +270,7 @@ class Repository < ActiveRecord::Base
   end
 
   def self.factory(klass_name, *args)
-    klass = "Repository::#{klass_name}".constantize
+    klass = klass_name.constantize
     klass.new(*args)
   rescue
     nil
