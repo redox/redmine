@@ -1,3 +1,4 @@
+# encoding:utf-8
 # Redmine - project management software
 # Copyright (C) 2006-2011  Jean-Philippe Lang
 #
@@ -98,7 +99,8 @@ class WikiController < ApplicationController
     @content.version = @page.content.version
   end
 
-  verify :method => :put, :only => :update, :render => {:nothing => true, :status => :method_not_allowed }
+  # TODO: since Rails 3, this verification fails
+  #verify :method => :put, :only => :update, :render => {:nothing => true, :status => :method_not_allowed }
   # Creates a new page or updates an existing one
   def update
     return render_403 unless editable?
@@ -109,14 +111,14 @@ class WikiController < ApplicationController
     # don't keep previous comment
     @content.comments = nil
 
-    if !@page.new_record? && params[:content].present? && @content.text == params[:content][:text]
+    if !@page.new_record? && params[:wiki_content].present? && @content.text == params[:wiki_content][:text]
       attachments = Attachment.attach_files(@page, params[:attachments])
       render_attachment_warning_if_needed(@page)
       # don't save if text wasn't changed
       redirect_to :action => 'show', :project_id => @project, :id => @page.title
       return
     end
-    @content.attributes = params[:content]
+    @content.attributes = params[:wiki_content]
     @content.author = User.current
     # if page is new @page.save will also save content, but not if page isn't a new record
     if (@page.new_record? ? @page.save : @content.save)
@@ -140,7 +142,8 @@ class WikiController < ApplicationController
     @page.redirect_existing_links = true
     # used to display the *original* title if some AR validation errors occur
     @original_title = @page.pretty_title
-    if request.post? && @page.update_attributes(params[:wiki_page])
+    return if request.get?
+    if @page.update_attributes(params[:wiki_page])
       flash[:notice] = l(:notice_successful_update)
       redirect_to :action => 'show', :project_id => @project, :id => @page.title
     end
@@ -225,7 +228,7 @@ class WikiController < ApplicationController
       @attachements = page.attachments
       @previewed = page.content
     end
-    @text = params[:content][:text]
+    @text = params[:wiki_content][:text]
     render :partial => 'common/preview'
   end
 

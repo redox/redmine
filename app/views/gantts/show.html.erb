@@ -27,7 +27,7 @@
 </p>
 <% end %>
 
-<%= error_messages_for %> <!-- FIXME: missing 'query' -->
+<%= error_messages_for :query %>
 <% if @query.valid? %>
 <% zoom = 1
 @gantt.zoom.times { zoom = zoom * 2 }

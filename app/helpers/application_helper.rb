@@ -201,7 +201,7 @@ module ApplicationHelper
       end
       content << "</ul>\n"
     end
-    content
+    content.html_safe
   end
   
   # Renders flash messages
@@ -490,7 +490,7 @@ module ApplicationHelper
       replace_toc(text, @parsed_headings)
     end
     
-    text
+    text.html_safe
   end
   
   def parse_non_pre_blocks(text)
@@ -768,7 +768,8 @@ module ApplicationHelper
     text.to_s.
       gsub(/\r\n?/, "\n").                    # \r\n and \r -> \n
       gsub(/\n\n+/, "<br /><br />").          # 2+ newline  -> 2 br
-      gsub(/([^\n]\n)(?=[^\n])/, '\1<br />')  # 1 newline   -> br
+      gsub(/([^\n]\n)(?=[^\n])/, '\1<br />'). # 1 newline   -> br
+      html_safe
   end
 
   def lang_options_for_select(blank=true)

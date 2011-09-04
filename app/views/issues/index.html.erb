@@ -44,7 +44,7 @@
 <% end %>
 
 <!-- 'query' should be down there, this is a hack -->
-<%= error_messages_for %> <!-- FIXME: missing 'query' -->
+<%= error_messages_for :query %>
 <% if @query.valid? %>
 <% if @issues.empty? %>
 <p class="nodata"><%= l(:label_no_data) %></p>
