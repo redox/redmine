@@ -174,7 +174,7 @@ class ProjectsController < ApplicationController
   def settings
     @issue_custom_fields = IssueCustomField.find(:all, :order => "#{CustomField.table_name}.position")
     @issue_category ||= IssueCategory.new
-    @member = @project.members.new
+    @member = @project.members.build
     @trackers = Tracker.all
     @repository = @project.repository || Repository.new
     @wiki = @project.wiki || Wiki.new
