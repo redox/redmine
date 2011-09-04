@@ -47,7 +47,7 @@ class RepositoriesGitControllerTest < ActionController::TestCase
     @response   = ActionController::TestResponse.new
     User.current = nil
     @project    = Project.find(PRJ_ID)
-    @repository = Repository::Git.create(
+    @repository = Git.create(
                       :project       => @project,
                       :url           => REPOSITORY_PATH,
                       :path_encoding => 'ISO-8859-1'
@@ -397,7 +397,7 @@ class RepositoriesGitControllerTest < ActionController::TestCase
       @project.reload
       assert_nil @project.repository
 
-      @repository = Repository::Git.create(
+      @repository = Git.create(
                       :project       => @project,
                       :url           => "/invalid",
                       :path_encoding => 'ISO-8859-1'

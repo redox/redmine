@@ -267,7 +267,7 @@ RAW
       'commit:abcd' => changeset_link,
      }
     @project = Project.find(3)
-    r = Repository::Git.create!(:project => @project, :url => '/tmp/test/git')
+    r = Git.create!(:project => @project, :url => '/tmp/test/git')
     assert r
     c = Changeset.new(:repository => r,
                       :committed_on => Time.now,
@@ -292,7 +292,7 @@ RAW
       'commit:20080308225258-98289-abcd456efg.gz' => changeset_link,
      }
     @project = Project.find(3)
-    r = Repository::Darcs.create!(
+    r = Darcs.create!(
             :project => @project, :url => '/tmp/test/darcs',
             :log_encoding => 'UTF-8')
     assert r
@@ -327,7 +327,7 @@ RAW
       'commit:abcd' => changeset_link_commit,
      }
     @project = Project.find(3)
-    r = Repository::Mercurial.create!(:project => @project, :url => '/tmp/test')
+    r = Mercurial.create!(:project => @project, :url => '/tmp/test')
     assert r
     c = Changeset.new(:repository => r,
                       :committed_on => Time.now,

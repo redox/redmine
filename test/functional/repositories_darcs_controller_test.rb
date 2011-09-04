@@ -34,7 +34,7 @@ class RepositoriesDarcsControllerTest < ActionController::TestCase
     @response   = ActionController::TestResponse.new
     User.current = nil
     @project = Project.find(PRJ_ID)
-    @repository = Repository::Darcs.create(
+    @repository = Darcs.create(
                         :project      => @project,
                         :url          => REPOSITORY_PATH,
                         :log_encoding => 'UTF-8'
@@ -129,7 +129,7 @@ class RepositoriesDarcsControllerTest < ActionController::TestCase
       @project.reload
       assert_nil @project.repository
 
-      @repository = Repository::Darcs.create(
+      @repository = Darcs.create(
                         :project      => @project,
                         :url          => "/invalid",
                         :log_encoding => 'UTF-8'
