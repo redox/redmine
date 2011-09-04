@@ -41,7 +41,7 @@ class RepositoriesController < ApplicationController
       @repository.project = @project if @repository
     end
     if request.post? && @repository
-      p1 = params[:repository]
+      p1 = params[params[:repository_scm].downcase.to_sym]
       p       = {}
       p_extra = {}
       p1.each do |k, v|
@@ -247,7 +247,7 @@ class RepositoriesController < ApplicationController
     @project = Project.find(params[:id])
     @repository = @project.repository
     (render_404; return false) unless @repository
-    @path = params[:path].join('/') unless params[:path].nil?
+    @path = params[:path].join('/') unless params[:path].blank?
     @path ||= ''
     @rev = params[:rev].blank? ? @repository.default_branch : params[:rev].strip
     @rev_to = params[:rev_to]
