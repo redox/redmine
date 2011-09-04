@@ -17,6 +17,10 @@ gem 'rails_autolink'
 
 group :development do
   gem "mongrel", "1.2.0.pre2"
+  gem "autotest"
+  gem "autotest-growl"
+  gem "autotest-fsevent"
+  gem "mynyml-redgreen"
 end
 
 group :production do

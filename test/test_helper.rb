@@ -21,6 +21,7 @@ require File.expand_path(File.dirname(__FILE__) + "/../config/environment")
 require 'shoulda/rails'
 require 'rails/test_help'
 require Rails.root.join('test', 'mocks', 'open_id_authentication_mock.rb')
+require 'redgreen'
 
 require File.expand_path(File.dirname(__FILE__) + '/object_daddy_helpers')
 include ObjectDaddyHelpers
