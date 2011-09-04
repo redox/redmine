@@ -13,6 +13,7 @@ gem "sqlite3-ruby"
 gem 'rubytree', '0.7.0'
 gem 'rails_legacy_mapper'
 gem 'awesome_nested_set'
+gem 'rails_autolink'
 
 group :development do
   gem "mongrel", "1.2.0.pre2"
