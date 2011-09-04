@@ -9,7 +9,7 @@
 <h3><%= l(:label_issue_watchers) %> (<%= watched.watcher_users.size %>)</h3>
 
 <% unless @watcher.nil? %>
-	<%= remote_form_for(:watcher, @watcher, 
+	<%= form_for(@watcher, :remote => true,
                 	   :url => {:controller => 'watchers',
               	              :action => 'new',
             	                :object_type => watched.class.name.underscore,
