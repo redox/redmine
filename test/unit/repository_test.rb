@@ -52,8 +52,7 @@ class RepositoryTest < ActiveSupport::TestCase
 
   def test_destroy
     changesets = Changeset.count(:all, :conditions => "repository_id = 10")
-    changes = Change.count(:all, :conditions => "repository_id = 10",
-                           :include => :changeset)
+    changes = Change.count(:all, :conditions => "repository_id = 10", :joins => :changeset)
     assert_difference 'Changeset.count', -changesets do
       assert_difference 'Change.count', -changes do
         Repository.find(10).destroy
@@ -68,7 +67,7 @@ class RepositoryTest < ActiveSupport::TestCase
                       :project => Project.find(3), :url => "svn://localhost")
       assert !repository.save
       assert_equal I18n.translate('activerecord.errors.messages.invalid'),
-                                  repository.errors.on(:type)
+                                  repository.errors[:type].join(",")
     end
   end
 
@@ -108,10 +107,10 @@ class RepositoryTest < ActiveSupport::TestCase
     # 2 email notifications
     assert_equal 2, ActionMailer::Base.deliveries.size
     mail = ActionMailer::Base.deliveries.first
-    assert_kind_of TMail::Mail, mail
+    assert_kind_of Mail::Message, mail
     assert mail.subject.starts_with?(
         "[#{fixed_issue.project.name} - #{fixed_issue.tracker.name} ##{fixed_issue.id}]")
-    assert mail.body.include?(
+    assert mail.body.encoded.include?(
         "Status changed from #{old_status} to #{fixed_issue.status}")
 
     # ignoring commits referencing an issue of another project
@@ -152,7 +151,7 @@ class RepositoryTest < ActiveSupport::TestCase
   end
 
   def test_for_urls_strip_subversion
-    repository = Subversion.create(
+    repository = Subversion.new(
         :project => Project.find(4),
         :url => ' file:///dummy   ')
     assert repository.save
