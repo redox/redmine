@@ -23,6 +23,7 @@ class MembersController < ApplicationController
   before_filter :authorize
 
   def new
+    @member = Member.new
     members = []
     if params[:member] && request.post?
       attrs = params[:member].dup

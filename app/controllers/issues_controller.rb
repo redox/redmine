@@ -134,6 +134,7 @@ class IssuesController < ApplicationController
   # Add a new issue
   # The new issue will be created from an existing one if copy_from parameter is given
   def new
+    @issue ||= Issue.new
     respond_to do |format|
       format.html { render :action => 'new', :layout => !request.xhr? }
       format.js { render :partial => 'attributes' }
