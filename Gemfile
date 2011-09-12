@@ -30,7 +30,7 @@ group :development do
   gem "autotest-growl"
   gem "autotest-fsevent"
   gem "mynyml-redgreen"
-  gem 'rails-dev-boost', :git => 'git://github.com/thedarkone/rails-dev-boost.git', :require => 'rails_development_boost'
+  gem 'rails-dev-tweaks', '~> 0.4.0'
 end
 
 group :production do
