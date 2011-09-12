@@ -14,13 +14,23 @@ gem 'rubytree', '0.7.0'
 gem 'rails_legacy_mapper'
 gem 'awesome_nested_set'
 gem 'rails_autolink'
+gem "therubyracer"
+
+# Gems used only for assets and not required
+# in production environments by default.
+group :assets do
+  gem 'sass-rails', "  ~> 3.1.0"
+  gem 'coffee-rails', "~> 3.1.0"
+  gem 'uglifier'
+end
 
 group :development do
-  gem "mongrel", "1.2.0.pre2"
+  gem "thin"
   gem "autotest"
   gem "autotest-growl"
   gem "autotest-fsevent"
   gem "mynyml-redgreen"
+  gem 'rails-dev-boost', :git => 'git://github.com/thedarkone/rails-dev-boost.git', :require => 'rails_development_boost'
 end
 
 group :production do
