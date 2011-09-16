@@ -242,8 +242,13 @@ class WikiController < ApplicationController
 private
 
   def find_wiki
-    @project = Project.find(params[:project_id])
-    @wiki = @project.wiki
+    if params[:project_id]
+      @project = Project.find(params[:project_id])
+      @wiki = @project.wiki
+    else
+      @wiki = WikiPage.find_by_title(params[:id]).wiki rescue (raise ActiveRecord::RecordNotFound.new)
+      @project = @wiki.project
+    end
     render_404 unless @wiki
   rescue ActiveRecord::RecordNotFound
     render_404
