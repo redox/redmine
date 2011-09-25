@@ -1,5 +1,5 @@
 # Redmine - project management software
-# Copyright (C) 2006-2009  Jean-Philippe Lang
+# Copyright (C) 2006-2011  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -25,7 +25,7 @@ module Redmine
         #  ActionController::AbstractRequest.relative_url_root.to_s
         nil
       end
-      
+
       # Sets the relative root url of the application
       def relative_url_root=(arg)
         #if ActionController::Base.respond_to?('relative_url_root=')

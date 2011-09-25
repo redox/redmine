@@ -46,6 +46,8 @@ class IssueRelation < ActiveRecord::Base
   
   after_initialize :init_relation_type
 
+  before_save :handle_issue_order
+
   def visible?(user=User.current)
     (issue_from.nil? || issue_from.visible?(user)) && (issue_to.nil? || issue_to.visible?(user))
   end
@@ -56,8 +58,6 @@ class IssueRelation < ActiveRecord::Base
         (issue_to.nil? || user.allowed_to?(:manage_issue_relations, issue_to.project)))
   end
 
-  before_save :handle_issue_order
-  
   def other_issue(issue)
     (self.issue_from_id == issue.id) ? issue_to : issue_from
   end

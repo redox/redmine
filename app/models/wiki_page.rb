@@ -72,6 +72,28 @@ class WikiPage < ActiveRecord::Base
     write_attribute(:title, value)
   end
 
+  def handle_redirects
+    self.title = Wiki.titleize(title)
+    # Manage redirects if the title has changed
+    if !@previous_title.blank? && (@previous_title != title) && !new_record?
+      # Update redirects that point to the old title
+      wiki.redirects.find_all_by_redirects_to(@previous_title).each do |r|
+        r.redirects_to = title
+        r.title == r.redirects_to ? r.destroy : r.save
+      end
+      # Remove redirects for the new title
+      wiki.redirects.find_all_by_title(title).each(&:destroy)
+      # Create a redirect to the new title
+      wiki.redirects << WikiRedirect.new(:title => @previous_title, :redirects_to => title) unless redirect_existing_links == "0"
+      @previous_title = nil
+    end
+  end
+
+  def remove_redirects
+    # Remove redirects to this page
+    wiki.redirects.find_all_by_redirects_to(title).each(&:destroy)
+  end
+
   def pretty_title
     WikiPage.pretty_title(title)
   end

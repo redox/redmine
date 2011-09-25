@@ -19,11 +19,11 @@
 			<td class="subject">
         <%= link_to h(truncate(issue.subject, :length => 60)), :controller => 'issues', :action => 'show', :id => issue %> (<%=h issue.status %>)
       </td>
-		</tr>
-		<% end %>
-		</tbody>
-	</table>
+    </tr>
+    <% end %>
+    </tbody>
+  </table>
 <% end %>
 <% else %>
-	<p class="nodata"><%= l(:label_no_data) %></p>
+  <p class="nodata"><%= l(:label_no_data) %></p>
 <% end %>

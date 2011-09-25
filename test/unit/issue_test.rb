@@ -29,14 +29,19 @@ class IssueTest < ActiveSupport::TestCase
            :time_entries
 
   def test_create
-    issue = Issue.new(:project_id => 1, :tracker_id => 1, :author_id => 3, :status_id => 1, :priority => IssuePriority.all.first, :subject => 'test_create', :description => 'IssueTest#test_create', :estimated_hours => '1:30')
+    issue = Issue.new(:project_id => 1, :tracker_id => 1, :author_id => 3,
+                      :status_id => 1, :priority => IssuePriority.all.first,
+                      :subject => 'test_create',
+                      :description => 'IssueTest#test_create', :estimated_hours => '1:30')
     assert issue.save
     issue.reload
     assert_equal 1.5, issue.estimated_hours
   end
 
   def test_create_minimal
-    issue = Issue.new(:project_id => 1, :tracker_id => 1, :author_id => 3, :status_id => 1, :priority => IssuePriority.all.first, :subject => 'test_create')
+    issue = Issue.new(:project_id => 1, :tracker_id => 1, :author_id => 3,
+                      :status_id => 1, :priority => IssuePriority.all.first,
+                      :subject => 'test_create')
     assert issue.save
     assert issue.description.nil?
   end
@@ -282,8 +287,8 @@ class IssueTest < ActiveSupport::TestCase
   end
 
   def test_category_based_assignment
-    Issue.create!(:project_id => 1, :tracker_id => 1, :author_id => 3, :status_id => 1, :priority => IssuePriority.all.first, :subject => 'Assignment test', :description => 'Assignment test', :category_id => 1)
-    assert_equal IssueCategory.find(1).assigned_to, Issue.last.assigned_to
+    issue = Issue.create!(:project_id => 1, :tracker_id => 1, :author_id => 3, :status_id => 1, :priority => IssuePriority.all.first, :subject => 'Assignment test', :description => 'Assignment test', :category_id => 1)
+    assert_equal IssueCategory.find(1).assigned_to, issue.assigned_to
   end
 
   def test_new_statuses_allowed_to
@@ -333,7 +338,9 @@ class IssueTest < ActiveSupport::TestCase
 
   def test_should_close_duplicates
     # Create 3 issues
-    issue1 = Issue.new(:project_id => 1, :tracker_id => 1, :author_id => 1, :status_id => 1, :priority => IssuePriority.all.first, :subject => 'Duplicates test', :description => 'Duplicates test')
+    issue1 = Issue.new(:project_id => 1, :tracker_id => 1, :author_id => 1,
+                       :status_id => 1, :priority => IssuePriority.all.first,
+                       :subject => 'Duplicates test', :description => 'Duplicates test')
     assert issue1.save
     issue2 = Issue.new(issue1.attributes)
     assert issue2.save
@@ -360,7 +367,9 @@ class IssueTest < ActiveSupport::TestCase
 
   def test_should_not_close_duplicated_issue
     # Create 3 issues
-    issue1 = Issue.new(:project_id => 1, :tracker_id => 1, :author_id => 1, :status_id => 1, :priority => IssuePriority.all.first, :subject => 'Duplicates test', :description => 'Duplicates test')
+    issue1 = Issue.new(:project_id => 1, :tracker_id => 1, :author_id => 1,
+                       :status_id => 1, :priority => IssuePriority.all.first,
+                       :subject => 'Duplicates test', :description => 'Duplicates test')
     assert issue1.save
     issue2 = Issue.new(issue1.attributes)
     assert issue2.save
@@ -738,7 +747,10 @@ class IssueTest < ActiveSupport::TestCase
 
   def test_create_should_send_email_notification
     ActionMailer::Base.deliveries.clear
-    issue = Issue.new(:project_id => 1, :tracker_id => 1, :author_id => 3, :status_id => 1, :priority => IssuePriority.all.first, :subject => 'test_create', :estimated_hours => '1:30')
+    issue = Issue.new(:project_id => 1, :tracker_id => 1,
+                      :author_id => 3, :status_id => 1,
+                      :priority => IssuePriority.all.first,
+                      :subject => 'test_create', :estimated_hours => '1:30')
 
     assert issue.save
     assert_equal 1, ActionMailer::Base.deliveries.size
@@ -833,17 +845,31 @@ class IssueTest < ActiveSupport::TestCase
 
   def test_all_dependent_issues
     IssueRelation.delete_all
-    assert IssueRelation.create!(:issue_from => Issue.find(1), :issue_to => Issue.find(2), :relation_type => IssueRelation::TYPE_PRECEDES)
-    assert IssueRelation.create!(:issue_from => Issue.find(2), :issue_to => Issue.find(3), :relation_type => IssueRelation::TYPE_PRECEDES)
-    assert IssueRelation.create!(:issue_from => Issue.find(3), :issue_to => Issue.find(8), :relation_type => IssueRelation::TYPE_PRECEDES)
+    assert IssueRelation.create!(:issue_from => Issue.find(1),
+                                 :issue_to   => Issue.find(2),
+                                 :relation_type => IssueRelation::TYPE_PRECEDES)
+    assert IssueRelation.create!(:issue_from => Issue.find(2),
+                                 :issue_to   => Issue.find(3),
+                                 :relation_type => IssueRelation::TYPE_PRECEDES)
+    assert IssueRelation.create!(:issue_from => Issue.find(3),
+                                 :issue_to   => Issue.find(8),
+                                 :relation_type => IssueRelation::TYPE_PRECEDES)
 
     assert_equal [2, 3, 8], Issue.find(1).all_dependent_issues.collect(&:id).sort
   end
 
   def test_all_dependent_issues_with_persistent_circular_dependency
     IssueRelation.delete_all
-    assert IssueRelation.create!(:issue_from => Issue.find(1), :issue_to => Issue.find(2), :relation_type => IssueRelation::TYPE_PRECEDES)
-    assert IssueRelation.create!(:issue_from => Issue.find(2), :issue_to => Issue.find(3), :relation_type => IssueRelation::TYPE_PRECEDES)
+    assert IssueRelation.create!(:issue_from => Issue.find(1),
+                                 :issue_to   => Issue.find(2),
+                                 :relation_type => IssueRelation::TYPE_PRECEDES)
+    assert IssueRelation.create!(:issue_from => Issue.find(2),
+                                 :issue_to   => Issue.find(3),
+                                 :relation_type => IssueRelation::TYPE_PRECEDES)
+    # Validation skipping
+    assert IssueRelation.new(:issue_from => Issue.find(3),
+                             :issue_to   => Issue.find(1),
+                             :relation_type => IssueRelation::TYPE_PRECEDES).save(false)
 
     assert_equal false, IssueRelation.new(:issue_from => Issue.find(3), :issue_to => Issue.find(1), :relation_type => IssueRelation::TYPE_PRECEDES).save
     assert_equal [2, 3], Issue.find(1).all_dependent_issues.collect(&:id).sort
@@ -851,12 +877,22 @@ class IssueTest < ActiveSupport::TestCase
 
   def test_all_dependent_issues_with_persistent_multiple_circular_dependencies
     IssueRelation.delete_all
-    assert IssueRelation.create!(:issue_from => Issue.find(1), :issue_to => Issue.find(2), :relation_type => IssueRelation::TYPE_RELATES)
-    assert IssueRelation.create!(:issue_from => Issue.find(2), :issue_to => Issue.find(3), :relation_type => IssueRelation::TYPE_RELATES)
-    assert IssueRelation.create!(:issue_from => Issue.find(3), :issue_to => Issue.find(8), :relation_type => IssueRelation::TYPE_RELATES)
-
-    assert_equal false, IssueRelation.new(:issue_from => Issue.find(8), :issue_to => Issue.find(2), :relation_type => IssueRelation::TYPE_RELATES).save
-    assert_equal false, IssueRelation.new(:issue_from => Issue.find(3), :issue_to => Issue.find(1), :relation_type => IssueRelation::TYPE_RELATES).save
+    assert IssueRelation.create!(:issue_from => Issue.find(1),
+                                 :issue_to   => Issue.find(2),
+                                 :relation_type => IssueRelation::TYPE_RELATES)
+    assert IssueRelation.create!(:issue_from => Issue.find(2),
+                                 :issue_to   => Issue.find(3),
+                                 :relation_type => IssueRelation::TYPE_RELATES)
+    assert IssueRelation.create!(:issue_from => Issue.find(3),
+                                 :issue_to   => Issue.find(8),
+                                 :relation_type => IssueRelation::TYPE_RELATES)
+    # Validation skipping
+    assert IssueRelation.new(:issue_from => Issue.find(8),
+                             :issue_to   => Issue.find(2),
+                             :relation_type => IssueRelation::TYPE_RELATES).save(false)
+    assert IssueRelation.new(:issue_from => Issue.find(3),
+                             :issue_to   => Issue.find(1),
+                             :relation_type => IssueRelation::TYPE_RELATES).save(false)
 
     assert_equal [2, 3, 8], Issue.find(1).all_dependent_issues.collect(&:id).sort
   end

@@ -73,6 +73,7 @@ class User < Principal
   validates_confirmation_of :password, :allow_nil => true
   validate :validate_password_length
   validates_inclusion_of :mail_notification, :in => MAIL_NOTIFICATION_OPTIONS.collect(&:first), :allow_blank => true
+  validate :validate_password_length
 
   before_save :update_hashed_password
   before_create :set_mail_notification
@@ -546,7 +547,7 @@ class User < Principal
   end
 
   protected
-  
+
   def validate_password_length
     # Password length validation based on setting
     if !password.nil? && password.size < Setting.password_min_length.to_i

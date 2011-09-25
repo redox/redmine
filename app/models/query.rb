@@ -167,8 +167,7 @@ class Query < ActiveRecord::Base
   def init_filters
     self.filters ||= { 'status_id' => {:operator => "o", :values => [""]} }
   end
-  
-  # FIXME: not working as expected, this needs to be completely refactored for Rails 3
+
   def validate_query_filters
     filters.each_key do |field|
       if values_for(field)

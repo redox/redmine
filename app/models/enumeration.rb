@@ -25,7 +25,7 @@ class Enumeration < ActiveRecord::Base
   acts_as_tree :order => 'position ASC'
 
   before_destroy :check_integrity
-  before_save :check_default
+  before_save    :check_default
 
   validates_presence_of :name
   validates_uniqueness_of :name, :scope => [:type, :project_id]

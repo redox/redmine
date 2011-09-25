@@ -23,6 +23,10 @@ class Token < ActiveRecord::Base
   
   @@validity_time = 1.day
 
+  def generate_new_token
+    self.value = Token.generate_token_value
+  end
+
   # Return true if token has expired
   def expired?
     return Time.now > self.created_on + @@validity_time
@@ -43,9 +47,5 @@ private
     if user
       Token.delete_all(['user_id = ? AND action = ?', user.id, action])
     end
-  end
-
-  def generate_new_token
-    self.value = Token.generate_token_value
   end
 end

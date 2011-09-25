@@ -62,7 +62,7 @@ class Message < ActiveRecord::Base
     end
     board.reset_counters!
   end
-  
+
   def update_messages_board
     if board_id_changed?
       Message.update_all("board_id = #{board_id}", ["id = ? OR parent_id = ?", root.id, root.id])
