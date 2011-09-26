@@ -1,18 +1,17 @@
-en:
-  # Text direction: Left-to-Right (ltr) or Right-to-Left (rtl)
+en-GB:
   direction: ltr
   date:
     formats:
       # Use the strftime parameters for formats.
       # When no format has been given, it uses default.
       # You can provide other formats here if you like!
-      default: "%m/%d/%Y"
-      short: "%b %d"
-      long: "%B %d, %Y"
-
+      default: "%d/%m/%Y"
+      short: "%d %b"
+      long: "%d %B, %Y"
+      
     day_names: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday]
     abbr_day_names: [Sun, Mon, Tue, Wed, Thu, Fri, Sat]
-
+      
     # Don't forget the nil at the beginning; there's no such thing as a 0th month
     month_names: [~, January, February, March, April, May, June, July, August, September, October, November, December]
     abbr_month_names: [~, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec]
@@ -24,13 +23,13 @@ en:
 
   time:
     formats:
-      default: "%m/%d/%Y %I:%M %p"
+      default: "%d/%m/%Y %I:%M %p"
       time: "%I:%M %p"
       short: "%d %b %H:%M"
-      long: "%B %d, %Y %H:%M"
+      long: "%d %B, %Y %H:%M"
     am: "am"
     pm: "pm"
-
+      
   datetime:
     distance_in_words:
       half_a_minute: "half a minute"
@@ -71,8 +70,13 @@ en:
   number:
     format:
       separator: "."
-      delimiter: ""
+      delimiter: " "
       precision: 3
+
+    currency:
+      format:
+        format: "%u%n"
+        unit: "£"
 
     human:
       format:
@@ -89,12 +93,13 @@ en:
           gb: "GB"
           tb: "TB"
 
+        
 # Used in array.to_sentence.
   support:
     array:
       sentence_connector: "and"
       skip_last_comma: false
-
+      
   activerecord:
     errors:
       template:
@@ -128,18 +133,18 @@ en:
         cant_link_an_issue_with_a_descendant: "An issue cannot be linked to one of its subtasks"
 
   actionview_instancetag_blank_option: Please select
-
+  
   general_text_No: 'No'
   general_text_Yes: 'Yes'
   general_text_no: 'no'
   general_text_yes: 'yes'
-  general_lang_name: 'English'
+  general_lang_name: 'English (British)'
   general_csv_separator: ','
   general_csv_decimal_separator: '.'
   general_csv_encoding: ISO-8859-1
   general_pdf_encoding: UTF-8
-  general_first_day_of_week: '7'
-
+  general_first_day_of_week: '1'
+  
   notice_account_updated: Account was successfully updated.
   notice_account_invalid_creditentials: Invalid user or password
   notice_account_password_updated: Password was successfully updated.
@@ -155,7 +160,7 @@ en:
   notice_successful_connection: Successful connection.
   notice_file_not_found: The page you were trying to access doesn't exist or has been removed.
   notice_locking_conflict: Data has been updated by another user.
-  notice_not_authorized: You are not authorized to access this page.
+  notice_not_authorized: You are not authorised to access this page.
   notice_not_authorized_archived_project: The project you're trying to access has been archived.
   notice_email_sent: "An email was sent to %{value}"
   notice_email_error: "An error occurred while sending mail (%{value})"
@@ -170,8 +175,7 @@ en:
   notice_unable_delete_time_entry: Unable to delete time log entry.
   notice_issue_done_ratios_updated: Issue done ratios updated.
   notice_gantt_chart_truncated: "The chart was truncated because it exceeds the maximum number of items that can be displayed (%{max})"
-  notice_issue_successful_create: "Issue %{id} created."
-
+  
   error_can_t_load_default_data: "Default configuration could not be loaded: %{value}"
   error_scm_not_found: "The entry or revision was not found in the repository."
   error_scm_command_failed: "An error occurred when trying to access the repository: %{value}"
@@ -190,7 +194,7 @@ en:
   error_unable_delete_issue_status: 'Unable to delete issue status'
   error_unable_to_connect: "Unable to connect (%{value})"
   warning_attachments_not_saved: "%{count} file(s) could not be saved."
-
+  
   mail_subject_lost_password: "Your %{value} password"
   mail_body_lost_password: 'To change your password, click on the following link:'
   mail_subject_register: "Your %{value} account activation"
@@ -205,10 +209,10 @@ en:
   mail_body_wiki_content_added: "The '%{id}' wiki page has been added by %{author}."
   mail_subject_wiki_content_updated: "'%{id}' wiki page has been updated"
   mail_body_wiki_content_updated: "The '%{id}' wiki page has been updated by %{author}."
-
+  
   gui_validation_error: 1 error
   gui_validation_error_plural: "%{count} errors"
-
+  
   field_name: Name
   field_description: Description
   field_summary: Summary
@@ -307,15 +311,7 @@ en:
   field_text: Text field
   field_visible: Visible
   field_warn_on_leaving_unsaved: "Warn me when leaving a page with unsaved text"
-  field_issues_visibility: Issues visibility
-  field_is_private: Private
-  field_commit_logs_encoding: Commit messages encoding
-  field_scm_path_encoding: Path encoding
-  field_path_to_repository: Path to repository
-  field_root_directory: Root directory
-  field_cvsroot: CVSROOT
-  field_cvs_module: Module
-
+  
   setting_app_title: Application title
   setting_app_subtitle: Application subtitle
   setting_welcome_text: Welcome text
@@ -373,8 +369,7 @@ en:
   setting_commit_logtime_enabled: Enable time logging
   setting_commit_logtime_activity_id: Activity for logged time
   setting_gantt_items_limit: Maximum number of items displayed on the gantt chart
-  setting_issue_group_assignment: Allow issue assignment to groups
-
+  
   permission_add_project: Create project
   permission_add_subprojects: Create subprojects
   permission_edit_project: Edit project
@@ -387,8 +382,6 @@ en:
   permission_add_issues: Add issues
   permission_edit_issues: Edit issues
   permission_manage_issue_relations: Manage issue relations
-  permission_set_issues_private: Set issues public or private
-  permission_set_own_issues_private: Set own issues public or private
   permission_add_issue_notes: Add notes
   permission_edit_issue_notes: Edit notes
   permission_edit_own_issue_notes: Edit own notes
@@ -432,7 +425,7 @@ en:
   permission_delete_own_messages: Delete own messages
   permission_export_wiki_pages: Export wiki pages
   permission_manage_subtasks: Manage subtasks
-
+  
   project_module_issue_tracking: Issue tracking
   project_module_time_tracking: Time tracking
   project_module_news: News
@@ -443,7 +436,7 @@ en:
   project_module_boards: Forums
   project_module_calendar: Calendar
   project_module_gantt: Gantt
-
+  
   label_user: User
   label_user_plural: Users
   label_user_new: New user
@@ -464,9 +457,6 @@ en:
   label_issues_by: "Issues by %{value}"
   label_issue_added: Issue added
   label_issue_updated: Issue updated
-  label_issue_note_added: Note added
-  label_issue_status_updated: Status updated
-  label_issue_priority_updated: Priority updated
   label_document: Document
   label_document_new: New document
   label_document_plural: Documents
@@ -601,7 +591,7 @@ en:
   label_internal: Internal
   label_last_changes: "last %{count} changes"
   label_change_view_all: View all changes
-  label_personalize_page: Personalize this page
+  label_personalize_page: Personalise this page
   label_comment: Comment
   label_comment_plural: Comments
   label_x_comments:
@@ -623,7 +613,6 @@ en:
   label_in_more_than: in more than
   label_greater_or_equal: '>='
   label_less_or_equal: '<='
-  label_between: between
   label_in: in
   label_today: today
   label_all_time: all time
@@ -647,7 +636,7 @@ en:
   label_modification: "%{count} change"
   label_modification_plural: "%{count} changes"
   label_branch: Branch
-  label_tag: Tag
+  label_tag: Tag 
   label_revision: Revision
   label_revision_plural: Revisions
   label_revision_id: "Revision %{value}"
@@ -694,7 +683,6 @@ en:
   label_statistics: Statistics
   label_commits_per_month: Commits per month
   label_commits_per_author: Commits per author
-  label_diff: diff
   label_view_diff: View differences
   label_diff_inline: inline
   label_diff_side_by_side: side by side
@@ -755,7 +743,6 @@ en:
   label_default_columns: Default columns
   label_no_change_option: (No change)
   label_bulk_edit_selected_issues: Bulk edit selected issues
-  label_bulk_edit_selected_time_entries: Bulk edit selected time entries
   label_theme: Theme
   label_default: Default
   label_search_titles_only: Search titles only
@@ -817,13 +804,7 @@ en:
   label_project_copy_notifications: Send email notifications during the project copy
   label_principal_search: "Search for user or group:"
   label_user_search: "Search for user:"
-  label_additional_workflow_transitions_for_author: Additional transitions allowed when the user is the author
-  label_additional_workflow_transitions_for_assignee: Additional transitions allowed when the user is the assignee
-  label_issues_visibility_all: All issues
-  label_issues_visibility_public: All non private issues
-  label_issues_visibility_own: Issues created by or assigned to the user
-  label_git_report_last_commit: Report last commit for files and directories
-
+  
   button_login: Login
   button_submit: Submit
   button_save: Save
@@ -870,17 +851,17 @@ en:
   button_quote: Quote
   button_duplicate: Duplicate
   button_show: Show
-
+  
   status_active: active
   status_registered: registered
   status_locked: locked
-
+  
   version_status_open: open
   version_status_locked: locked
   version_status_closed: closed
 
   field_active: Active
-
+  
   text_select_mail_notifications: Select actions for which email notifications should be sent.
   text_regexp_info: eg. ^[A-Z0-9]+$
   text_min_max_length_info: 0 means no restriction
@@ -894,9 +875,9 @@ en:
   text_journal_set_to: "%{label} set to %{value}"
   text_journal_deleted: "%{label} deleted (%{old})"
   text_journal_added: "%{label} %{value} added"
-  text_tip_issue_begin_day: issue beginning this day
-  text_tip_issue_end_day: issue ending this day
-  text_tip_issue_begin_end_day: issue beginning and ending this day
+  text_tip_issue_begin_day: task beginning this day
+  text_tip_issue_end_day: task ending this day
+  text_tip_issue_begin_end_day: task beginning and ending this day
   text_project_identifier_info: 'Only lower case letters (a-z), numbers and dashes are allowed.<br />Once saved, the identifier cannot be changed.'
   text_caracters_maximum: "%{count} characters maximum."
   text_caracters_minimum: "Must be at least %{count} characters long."
@@ -918,8 +899,6 @@ en:
   text_status_changed_by_changeset: "Applied in changeset %{value}."
   text_time_logged_by_changeset: "Applied in changeset %{value}."
   text_issues_destroy_confirmation: 'Are you sure you want to delete the selected issue(s)?'
-  text_issues_destroy_descendants_confirmation: "This will also delete %{count} subtask(s)."
-  text_time_entries_destroy_confirmation: 'Are you sure you want to delete the selected time entr(y/ies)?'
   text_select_project_modules: 'Select modules to enable for this project:'
   text_default_administrator_account_changed: Default administrator account changed
   text_file_repository_writable: Attachments directory writable
@@ -944,14 +923,7 @@ en:
   text_zoom_in: Zoom in
   text_zoom_out: Zoom out
   text_warn_on_leaving_unsaved: "The current page contains unsaved text that will be lost if you leave this page."
-  text_scm_path_encoding_note: "Default: UTF-8"
-  text_git_repository_note: Repository is bare and local (e.g. /gitrepo, c:\gitrepo)
-  text_mercurial_repository_note: Local repository (e.g. /hgrepo, c:\hgrepo)
-  text_scm_command: Command
-  text_scm_command_version: Version
-  text_scm_config: You can configure your scm commands in config/configuration.yml. Please restart the application after editing it.
-  text_scm_command_not_available: Scm command is not available. Please check settings on the administration panel.
-
+  
   default_role_manager: Manager
   default_role_developer: Developer
   default_role_reporter: Reporter
@@ -973,8 +945,41 @@ en:
   default_priority_immediate: Immediate
   default_activity_design: Design
   default_activity_development: Development
-
+  
   enumeration_issue_priorities: Issue priorities
   enumeration_doc_categories: Document categories
   enumeration_activities: Activities (time tracking)
   enumeration_system_activity: System Activity
+  label_additional_workflow_transitions_for_assignee: Additional transitions allowed when the user is the assignee
+  label_additional_workflow_transitions_for_author: Additional transitions allowed when the user is the author
+  label_bulk_edit_selected_time_entries: Bulk edit selected time entries
+  text_time_entries_destroy_confirmation: Are you sure you want to delete the selected time entr(y/ies)?
+  label_issue_note_added: Note added
+  label_issue_status_updated: Status updated
+  label_issue_priority_updated: Priority updated
+  label_issues_visibility_own: Issues created by or assigned to the user
+  field_issues_visibility: Issues visibility
+  label_issues_visibility_all: All issues
+  permission_set_own_issues_private: Set own issues public or private
+  field_is_private: Private
+  permission_set_issues_private: Set issues public or private
+  label_issues_visibility_public: All non private issues
+  text_issues_destroy_descendants_confirmation: This will also delete %{count} subtask(s).
+  field_commit_logs_encoding: Commit messages encoding
+  field_scm_path_encoding: Path encoding
+  text_scm_path_encoding_note: "Default: UTF-8"
+  field_path_to_repository: Path to repository
+  field_root_directory: Root directory
+  field_cvs_module: Module
+  field_cvsroot: CVSROOT
+  text_mercurial_repository_note: Local repository (e.g. /hgrepo, c:\hgrepo)
+  text_scm_command: Command
+  text_scm_command_version: Version
+  label_git_report_last_commit: Report last commit for files and directories
+  text_scm_config: You can configure your scm commands in config/configuration.yml. Please restart the application after editing it.
+  text_scm_command_not_available: Scm command is not available. Please check settings on the administration panel.
+  notice_issue_successful_create: Issue %{id} created.
+  label_between: between
+  setting_issue_group_assignment: Allow issue assignment to groups
+  label_diff: diff
+  text_git_repository_note: Repository is bare and local (e.g. /gitrepo, c:\gitrepo)
