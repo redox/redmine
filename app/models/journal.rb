@@ -36,6 +36,8 @@ class Journal < ActiveRecord::Base
                             :find_options => {:include => [{:issue => :project}, :details, :user],
                                               :conditions => "#{Journal.table_name}.journalized_type = 'Issue' AND" +
                                                              " (#{JournalDetail.table_name}.prop_key = 'status_id' OR #{Journal.table_name}.notes <> '')"}
+
+ acts_as_taggable_on :likeness, :importantness
   
   scope :visible, lambda {|*args| {
     :include => {:issue => :project},

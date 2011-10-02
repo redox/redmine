@@ -49,6 +49,8 @@ class Issue < ActiveRecord::Base
   acts_as_activity_provider :find_options => {:include => [:project, :author, :tracker]},
                             :author_key => :author_id
 
+  acts_as_taggable_on :likeness, :importantness
+
   DONE_RATIO_OPTIONS = %w(issue_field issue_status)
 
   attr_reader :current_journal

@@ -317,9 +317,30 @@ div#issue-changesets p { margin-top: 0; margin-bottom: 1em;}
 
 div#activity dl, #search-results { margin-left: 2em; }
 div#activity dd, #search-results dd { margin-bottom: 1em; padding-left: 18px; font-size: 0.9em; }
-div#activity dt, #search-results dt { margin-bottom: 0px; padding-left: 20px; line-height: 18px; background-position: 0 50%; background-repeat: no-repeat; }
-div#activity dt.me .time { border-bottom: 1px solid #999; }
+div#activity dt, #search-results dt { margin-bottom: 0px; padding-bottom: 2px; padding-left: 20px; line-height: 18px; background-position: 0 50%; background-repeat: no-repeat; }
 div#activity dt .time { color: #777; font-size: 80%; }
+div#activity dt.me .time { border-bottom: 1px solid #999; }
+div#activity dt:hover {
+    background-color:#FAFAFA;
+}
+div#activity dd.like {
+    background: url(/assets/like.png) 0px 1px no-repeat;
+    padding-left: 30px;
+}
+div#activity dt.important, div#activity dt.important:hover {
+	background-color: #ffe3e3;
+}
+div#activity dt .like_tag, div#activity dt .important_tag { display: none; }
+div#activity dt .like_tag a, div#activity dt .important_tag a {
+    color: #2A5685;
+    font-size: 11px;
+}
+div#activity dt:hover .important_tag, div#activity dt:hover .like_tag {
+    display: block;
+    float: right;
+    font-style: italic;
+    padding: 5px 10px 0 0;
+}
 div#activity dd .description, #search-results dd .description { font-style: italic; }
 div#activity span.project:after, #search-results span.project:after { content: " -"; }
 div#activity dd span.description, #search-results dd span.description { display:block; color: #808080; }

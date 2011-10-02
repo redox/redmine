@@ -55,6 +55,8 @@ class User < Principal
   scope :active, :conditions => "#{User.table_name}.status = #{STATUS_ACTIVE}"
   
   acts_as_customizable
+  
+  acts_as_tagger
 
   attr_accessor :password, :password_confirmation
   attr_accessor :last_before_login_on

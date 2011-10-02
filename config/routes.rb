@@ -165,10 +165,18 @@ Redmine::Application.routes.draw do |map|
     project.wiki_diff 'wiki/:id/diff/:version/vs/:version_from', :controller => 'wiki', :action => 'diff'
     project.wiki_annotate 'wiki/:id/annotate/:version', :controller => 'wiki', :action => 'annotate'
     
+    project.connect 'activity.:format', :controller => 'activities', :action => 'index', :conditions => {:method => :get}
+    project.connect 'activity/:id/important', :controller => 'activities', :action => 'important', :conditions => {:method => :get}
+    project.connect 'activity/:id/like', :controller => 'activities', :action => 'like', :conditions => {:method => :get}
+    
     project.resources :queries
     project.resources :documents
     project.resources :boards
   end
+  
+  map.connect 'activity.:format', :controller => 'activities', :action => 'index', :conditions => {:method => :get}
+  map.connect 'activity/:id/important', :controller => 'activities', :action => 'important', :conditions => {:method => :get}
+  map.connect 'activity/:id/like', :controller => 'activities', :action => 'like', :conditions => {:method => :get}
 
   # Destroy uses a get request to prompt the user before the actual DELETE request
   map.project_destroy_confirm 'projects/:id/destroy', :controller => 'projects', :action => 'destroy', :conditions => {:method => :get}
@@ -179,12 +187,7 @@ Redmine::Application.routes.draw do |map|
       project_views.connect 'projects/:project_id/issues/:copy_from/copy', :controller => 'issues', :action => 'new'
     end
   end
-
-  map.with_options :controller => 'activities', :action => 'index', :conditions => {:method => :get} do |activity|
-    activity.connect 'projects/:id/activity.:format'
-    activity.connect 'activity.:format', :id => nil
-  end
-
+  
   map.with_options :controller => 'issue_categories' do |categories|
     categories.connect 'projects/:project_id/issue_categories/new', :action => 'new'
   end

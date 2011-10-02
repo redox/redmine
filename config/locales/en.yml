@@ -978,3 +978,6 @@ en:
   enumeration_doc_categories: Document categories
   enumeration_activities: Activities (time tracking)
   enumeration_system_activity: System Activity
+  
+  tag_as_important: "Tag as important"
+  like: "Like!"

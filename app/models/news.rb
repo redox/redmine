@@ -28,6 +28,9 @@ class News < ActiveRecord::Base
   acts_as_event :url => Proc.new {|o| {:controller => 'news', :action => 'show', :id => o.id}}
   acts_as_activity_provider :find_options => {:include => [:project, :author]},
                             :author_key => :author_id
+  
+  acts_as_taggable_on :likeness, :importantness
+
   acts_as_watchable
 
   after_create :add_author_as_watcher

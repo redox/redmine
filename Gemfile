@@ -17,6 +17,7 @@ gem 'rails_autolink'
 gem 'therubyracer'
 gem 'sprockets', '2.0.0' # for now, 2.0.1 has some problem resolving stylesheet_path('application')
 gem 'railties', '3.1.0' # force it since coffee-rails depends on 3.1.1
+gem 'acts-as-taggable-on', '~>2.1.0'
 
 # Gems used only for assets and not required
 # in production environments by default.

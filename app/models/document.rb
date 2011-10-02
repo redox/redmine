@@ -26,6 +26,8 @@ class Document < ActiveRecord::Base
                 :url => Proc.new {|o| {:controller => 'documents', :action => 'show', :id => o.id}}
   acts_as_activity_provider :find_options => {:include => :project}
 
+  acts_as_taggable_on :likeness, :importantness
+
   validates_presence_of :project, :title, :category
   validates_length_of :title, :maximum => 60
 

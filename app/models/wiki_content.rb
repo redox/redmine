@@ -68,6 +68,8 @@ class WikiContent < ActiveRecord::Base
                                                           "LEFT JOIN #{Wiki.table_name} ON #{Wiki.table_name}.id = #{WikiPage.table_name}.wiki_id " +
                                                           "LEFT JOIN #{Project.table_name} ON #{Project.table_name}.id = #{Wiki.table_name}.project_id"}
 
+    acts_as_taggable_on :likeness, :importantness
+
     def text=(plain)
       case Setting.wiki_compression
       when 'gzip'

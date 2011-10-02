@@ -1,0 +1,15 @@
+<% project ||= nil %>
+<% like = activity.tag_counts_on(:likeness).count %>
+<% important = activity.tag_counts_on(:importantness).count %>
+<dt class="<%= 'like' if like > 0 %> <%= 'important' if important > 0 %> <%= activity.event_type %> <%= User.current.logged? && activity.respond_to?(:event_author) && User.current == activity.event_author ? 'me' : nil %>">
+  <span class="important_tag"><%= link_to t(:tag_as_important) + " (#{important})", :controller => 'activities', :action => 'important', :id => activity, :type => activity.class.name %></span>
+  <span class="like_tag"><%= link_to t(:like) + " (#{like})", :controller => 'activities', :action => 'like', :id => activity, :type => activity.class.name %></span>
+  <%= avatar(activity.event_author, :size => "24") if activity.respond_to?(:event_author) %>
+  <span class="time"><%= format_time(activity.event_datetime, false) %></span>
+  <%= content_tag('span', h(activity.project), :class => 'project') if project.nil? || project != activity.project %>
+  <%= link_to format_activity_title(activity.event_title), activity.event_url %>
+</dt>
+<dd class="<%= 'like' if like > 0 %> <%= 'important' if important > 0 %>">
+  <span class="description"><%= format_activity_description(activity.event_description) %></span>
+  <span class="author"><%= link_to_user(activity.event_author) if activity.respond_to?(:event_author) %></span>
+</dd>

@@ -17,7 +17,8 @@
 
 class ActivitiesController < ApplicationController
   menu_item :activity
-  before_filter :find_optional_project
+  before_filter :find_optional_project, :except => [:like, :important]
+  before_filter :find_activity, :only => [:like, :important]
   accept_rss_auth :index
 
   def index
@@ -61,15 +62,32 @@ class ActivitiesController < ApplicationController
   rescue ActiveRecord::RecordNotFound
     render_404
   end
+  
+  def like
+    User.current.tag(@activity, :with => :like, :on => :likeness)
+    redirect_to :back
+  end
+  
+  def important
+    User.current.tag(@activity, :with => :important, :on => :importantness)
+    redirect_to :back
+  end
 
   private
 
   # TODO: refactor, duplicated in projects_controller
   def find_optional_project
-    return true unless params[:id]
-    @project = Project.find(params[:id])
+    return true unless params[:project_id]
+    @project = Project.find(params[:project_id])
     authorize
   rescue ActiveRecord::RecordNotFound
     render_404
   end
+  
+  def find_activity
+    @activity = params[:type].constantize.find(params[:id])
+  rescue ActiveRecord::RecordNotFound
+    render_404
+  end
+  
 end
