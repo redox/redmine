@@ -345,6 +345,16 @@ div#activity dd .description, #search-results dd .description { font-style: ital
 div#activity span.project:after, #search-results span.project:after { content: " -"; }
 div#activity dd span.description, #search-results dd span.description { display:block; color: #808080; }
 
+div#activity dd ul.reviews {
+    border-left: 4px solid #507AAA;
+    padding: 0px;
+    margin: 10px 0px 10px 10px;
+}
+div#activity dd ul.reviews li {
+    list-style-type: none;
+    padding-left: 10px;
+}
+
 #search-results dd { margin-bottom: 1em; padding-left: 20px; margin-left:0px; }
 
 div#search-results-counts {float:right;}

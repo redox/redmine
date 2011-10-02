@@ -38,6 +38,8 @@ class Changeset < ActiveRecord::Base
                             :find_options => {:include => [:user, {:repository => :project}]}
                             
   acts_as_taggable_on :likeness, :importantness
+  
+  has_many :reviews, :as => :commented, :dependent => :delete_all, :order => "created_on"
 
   validates_presence_of :repository_id, :revision, :committed_on, :commit_date
   validates_uniqueness_of :revision, :scope => :repository_id
