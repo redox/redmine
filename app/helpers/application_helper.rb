@@ -571,15 +571,20 @@ module ApplicationHelper
           if page =~ /^(.+?)\#(.+)$/
             page, anchor = $1, $2
           end
+          anchor = sanitize_anchor_name(anchor) if anchor.present?
           # check if page exists
           wiki_page = link_project.wiki.find_page(page)
-          url = case options[:wiki_links]
-            when :local; "#{title}.html"
-            when :anchor; "##{title}"   # used for single-file wiki export
+          url = if anchor.present? && wiki_page.present? && (obj.is_a?(WikiContent) || obj.is_a?(WikiContent::Version)) && obj.page == wiki_page
+            "##{anchor}"
+          else
+            case options[:wiki_links]
+            when :local; "#{page.present? ? Wiki.titleize(page) : ''}.html" + (anchor.present? ? "##{anchor}" : '')
+            when :anchor; "##{page.present? ? Wiki.titleize(page) : title}" + (anchor.present? ? "_#{anchor}" : '') # used for single-file wiki export
             else
               wiki_page_id = page.present? ? Wiki.titleize(page) : nil
               url_for(:only_path => only_path, :controller => 'wiki', :action => 'show', :project_id => link_project, :id => wiki_page_id, :anchor => anchor)
             end
+          end
           link_to(h(title || page), url, :class => ('wiki-page' + (wiki_page ? '' : ' new')))
         else
           # project or wiki doesn't exist
@@ -724,7 +729,9 @@ module ApplicationHelper
     text.gsub!(HEADING_RE) do
       level, attrs, content = $1.to_i, $2, $3
       item = strip_tags(content).strip
-      anchor = item.gsub(%r{[^\w\s\-]}, '').gsub(%r{\s+(\-+\s*)?}, '-')
+      anchor = sanitize_anchor_name(item)
+      # used for single-file wiki export
+      anchor = "#{obj.page.title}_#{anchor}" if options[:wiki_links] == :anchor && (obj.is_a?(WikiContent) || obj.is_a?(WikiContent::Version))
       @parsed_headings << [level, anchor, item]
       "<a name=\"#{anchor}\"></a>\n<h#{level} #{attrs}>#{content}<a href=\"##{anchor}\" class=\"wiki-anchor\">&para;</a></h#{level}>"
     end
@@ -915,6 +922,10 @@ module ApplicationHelper
     end
   end
   
+  def sanitize_anchor_name(anchor)
+    anchor.gsub(%r{[^\w\s\-]}, '').gsub(%r{\s+(\-+\s*)?}, '-')
+  end
+
   # Returns the javascript tags that are included in the html layout head
   def javascript_heads
     tags = javascript_include_tag(:defaults)
