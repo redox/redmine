@@ -166,15 +166,15 @@ Redmine::Application.routes.draw do |map|
     project.wiki_annotate 'wiki/:id/annotate/:version', :controller => 'wiki', :action => 'annotate'
     
     project.connect 'activity.:format', :controller => 'activities', :action => 'index', :conditions => {:method => :get}
-    project.connect 'activity/:id/important', :controller => 'activities', :action => 'important', :conditions => {:method => :get}
-    project.connect 'activity/:id/like', :controller => 'activities', :action => 'like', :conditions => {:method => :get}
+    project.connect 'activity/important', :controller => 'activities', :action => 'important', :conditions => {:method => :get}
+    project.connect 'activity/like', :controller => 'activities', :action => 'like', :conditions => {:method => :get}
     
     project.resources :queries
     project.resources :documents
     project.resources :boards
   end
   
-  map.connect 'activity.:format', :controller => 'activities', :action => 'index', :conditions => {:method => :get}
+  map.connect 'activity.:format', :id => nil, :controller => 'activities', :action => 'index', :conditions => {:method => :get}
   map.connect 'activity/:id/important', :controller => 'activities', :action => 'important', :conditions => {:method => :get}
   map.connect 'activity/:id/like', :controller => 'activities', :action => 'like', :conditions => {:method => :get}
 
