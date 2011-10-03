@@ -48,9 +48,13 @@
     <h1><%= page_header_title %></h1>
 
     <% if display_main_menu?(@project) %>
-    <div id="main-menu">
-        <%= render_main_menu(@project) %>
-    </div>
+      <%= call_hook :view_layout_base_before_main_menu %>
+      <div id="main-menu">
+          <%= render_main_menu(@project) %>
+      </div>
+      <%= call_hook :view_layout_base_after_main_menu %>
+    <% else %>
+      <%= call_hook :view_layout_base_no_main_menu %>
     <% end %>
 </div>
 
