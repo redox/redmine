@@ -1,3 +1,4 @@
+<% @@activity_id ||= 0 %>
 <% project ||= nil %>
 <% like = activity.tag_counts_on(:likeness).count %>
 <% important = activity.tag_counts_on(:importantness).count %>
@@ -18,8 +19,8 @@
         <li><%= review.author.name %>: <%= review.comments %></li>
       <% end %>
     </ul>
-    <em><%= link_to_function t(:label_comment_add), "$('review_#{activity.class.name}_#{activity.id}').show(); this.hide();" %></em>
-    <div id="review_<%= activity.class.name %>_<%= activity.id %>" style="display: none;">
+    <em><%= link_to_function t(:label_comment_add), "$('review_#{@@activity_id}').show(); this.hide();" %></em>
+    <div id="review_<%= @@activity_id %>" style="display: none;">
       <%= form_tag({:controller => 'comments', :action => 'review', :id => activity, :type => activity.class.name}, :id => "add_comment_form") do %>
         <div class="box">
             <%= text_area 'comment', 'comments', :cols => 80, :rows => 5, :class => 'wiki-edit' %>
@@ -29,3 +30,4 @@
     </div>
   <% end %>
 </dd>
+<% @@activity_id += 1 %>
