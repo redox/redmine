@@ -926,6 +926,10 @@ module ApplicationHelper
     anchor.gsub(%r{[^\w\s\-]}, '').gsub(%r{\s+(\-+\s*)?}, '-')
   end
 
+  def sanitize_anchor_name(anchor)
+    anchor.gsub(%r{[^\w\s\-]}, '').gsub(%r{\s+(\-+\s*)?}, '-')
+  end
+
   # Returns the javascript tags that are included in the html layout head
   def javascript_heads
     tags = javascript_include_tag(:defaults)

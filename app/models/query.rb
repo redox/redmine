@@ -93,8 +93,8 @@ class Query < ActiveRecord::Base
   validates_presence_of :name, :on => :save
   validates_length_of :name, :maximum => 255
   validate :validate_query_filters
-    
-  @@operators = { "="   => :label_equals, 
+
+  @@operators = { "="   => :label_equals,
                   "!"   => :label_not_equals,
                   "o"   => :label_open_issues,
                   "c"   => :label_closed_issues,
