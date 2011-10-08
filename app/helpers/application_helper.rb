@@ -390,10 +390,18 @@ module ApplicationHelper
   end
   
   def reorder_links(name, url)
-    link_to(image_tag('2uparrow.png',   :alt => l(:label_sort_highest)), url.merge({"#{name}[move_to]" => 'highest'}), :method => :post, :title => l(:label_sort_highest)) +
-    link_to(image_tag('1uparrow.png',   :alt => l(:label_sort_higher)),  url.merge({"#{name}[move_to]" => 'higher'}),  :method => :post, :title => l(:label_sort_higher)) +
-    link_to(image_tag('1downarrow.png', :alt => l(:label_sort_lower)),   url.merge({"#{name}[move_to]" => 'lower'}),   :method => :post, :title => l(:label_sort_lower)) +
-    link_to(image_tag('2downarrow.png', :alt => l(:label_sort_lowest)),  url.merge({"#{name}[move_to]" => 'lowest'}),  :method => :post, :title => l(:label_sort_lowest))
+    link_to(image_tag('2uparrow.png', :alt => l(:label_sort_highest)),
+            url.merge({"#{name}[move_to]" => 'highest'}),
+            :method => :post, :title => l(:label_sort_highest)) +
+    link_to(image_tag('1uparrow.png',   :alt => l(:label_sort_higher)),
+            url.merge({"#{name}[move_to]" => 'higher'}),
+           :method => :post, :title => l(:label_sort_higher)) +
+    link_to(image_tag('1downarrow.png', :alt => l(:label_sort_lower)),
+            url.merge({"#{name}[move_to]" => 'lower'}),
+            :method => :post, :title => l(:label_sort_lower)) +
+    link_to(image_tag('2downarrow.png', :alt => l(:label_sort_lowest)),
+            url.merge({"#{name}[move_to]" => 'lowest'}),
+           :method => :post, :title => l(:label_sort_lowest))
   end
 
   def breadcrumb(*args)
@@ -416,13 +424,13 @@ module ApplicationHelper
         root = ancestors.shift
         b << link_to_project(root, {:jump => current_menu_item}, :class => 'root')
         if ancestors.size > 2
-          b << '&#8230;'
+          b << "\xe2\x80\xa6"
           ancestors = ancestors[-2, 2]
         end
         b += ancestors.collect {|p| link_to_project(p, {:jump => current_menu_item}, :class => 'ancestor') }
       end
       b << h(@project)
-      b.join(' &#187; ').html_safe
+      b.join(" \xc2\xbb ").html_safe
     end
   end
 
