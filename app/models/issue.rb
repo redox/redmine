@@ -60,7 +60,7 @@ class Issue < ActiveRecord::Base
   validates_length_of :subject, :maximum => 255
   validates_inclusion_of :done_ratio, :in => 0..100
   validates_numericality_of :estimated_hours, :allow_nil => true
-  validate :validate_due_date, :validate_fixed_version, :validate_tracker
+  validate :validate_issue
 
   # named_scope :visible,
   scope :visible,
@@ -346,7 +346,27 @@ class Issue < ActiveRecord::Base
     Setting.issue_done_ratio == 'issue_field'
   end
 
-  def validate_tracker
+  def validate_issue
+    if self.due_date.nil? && @attributes['due_date'] && !@attributes['due_date'].empty?
+      errors.add :due_date, :not_a_date
+    end
+
+    if self.due_date and self.start_date and self.due_date < self.start_date
+      errors.add :due_date, :greater_than_start_date
+    end
+
+    if start_date && soonest_start && start_date < soonest_start
+      errors.add :start_date, :invalid
+    end
+
+    if fixed_version
+      if !assignable_versions.include?(fixed_version)
+        errors.add :fixed_version_id, :inclusion
+      elsif reopened? && fixed_version.closed?
+        errors[:base] << I18n.t(:error_can_not_reopen_issue_on_closed_version)
+      end
+    end
+
     # Checks that the issue can not be added/moved to a disabled tracker
     if project && (tracker_id_changed? || project_id_changed?)
       unless project.trackers.include?(tracker)
@@ -826,30 +846,6 @@ class Issue < ActiveRecord::Base
   def attachment_added(obj)
     if @current_journal && !obj.new_record?
       @current_journal.details << JournalDetail.new(:property => 'attachment', :prop_key => obj.id, :value => obj.filename)
-    end
-  end
-
-  def validate_due_date
-    if self.due_date.nil? && @attributes['due_date'] && !@attributes['due_date'].empty?
-      errors.add :due_date, :not_a_date
-    end
-
-    if self.due_date and self.start_date and self.due_date < self.start_date
-      errors.add :due_date, :greater_than_start_date
-    end
-
-    if start_date && soonest_start && start_date < soonest_start
-      errors.add :start_date, :invalid
-    end
-  end
-
-  def validate_fixed_version
-    if fixed_version
-      if !assignable_versions.include?(fixed_version)
-        errors.add :fixed_version_id, :inclusion
-      elsif reopened? && fixed_version.closed?
-        errors[:base] << I18n.t(:error_can_not_reopen_issue_on_closed_version)
-      end
     end
   end
 
