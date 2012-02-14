@@ -4,7 +4,7 @@ gem 'rails', '3.1.1'
 gem 'i18n'
 gem 'coderay'
 gem 'rake', '0.8.7'
-gem 'prototype-rails', :git => 'git://github.com/rails/prototype-rails.git'
+gem 'prototype-rails', :git => 'git://github.com/rails/prototype-rails.git', :ref => '72998e15'
 gem 'dynamic_form', :git => 'git://github.com/rails/dynamic_form.git'
 gem 'rmagick'
 gem 'mysql'
@@ -38,6 +38,6 @@ end
 
 group :test do
   gem 'test-unit'
-  gem 'shoulda', :git => 'http://github.com/redox/shoulda', :branch => 'rails3'
+  gem 'shoulda'
   gem 'mocha'
 end
