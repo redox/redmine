@@ -44,7 +44,7 @@ class Mailer < ActionMailer::Base
 
   def process(*args)
     begin
-      super *args
+      super(*args)
     rescue AbortDeliveryError
       self.message = BlackholeMailMessage
     end
@@ -235,7 +235,7 @@ class Mailer < ActionMailer::Base
     mail "wiki_content_updated", :message_id => wiki_content,
       :to => wiki_content.recipients,
       :cc => (wiki_content.page.wiki.watcher_recipients + wiki_content.page.watcher_recipients - wiki_content.recipients),
-      :subject => "[#{wiki_content.project.name}] #{l(:mail_subject_wiki_content_updated, :id => wiki_content.page.pretty_title)}",
+      :subject => "[#{wiki_content.project.name}] #{l(:mail_subject_wiki_content_updated, :id => wiki_content.page.pretty_title)}"
   end
 
   # Builds a tmail object used to email the specified user their account information.
@@ -250,7 +250,7 @@ class Mailer < ActionMailer::Base
     @password = password
     @login_url = url_for(:controller => 'account', :action => 'login')
     mail "account_information", :to => user.mail,
-      :subject => l(:mail_subject_register, Setting.app_title),
+      :subject => l(:mail_subject_register, Setting.app_title)
   end
 
   # Builds a tmail object used to email all active administrators of an account activation request.
@@ -286,7 +286,7 @@ class Mailer < ActionMailer::Base
     @token = token
     @url = url_for(:controller => 'account', :action => 'lost_password', :token => token.value)
     mail "lost_password", :to => token.user.mail,
-      :subject => l(:mail_subject_lost_password, Setting.app_title),
+      :subject => l(:mail_subject_lost_password, Setting.app_title)
   end
 
   def register(token)
