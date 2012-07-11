@@ -44,7 +44,7 @@ class Role < ActiveRecord::Base
   acts_as_list
 
   serialize :permissions, Array
-  attr_protected :builtin
+  attr_accessor :builtin
 
   validates_presence_of :name
   validates_uniqueness_of :name
